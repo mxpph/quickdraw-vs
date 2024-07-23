@@ -1,2 +1,4 @@
 # Raw data from the codebase
 recreate-datapoint/full_raw_paperclip.ndjson
+
+recreate-datapoint/__pycache__
