@@ -1,12 +1,16 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 import json
 
 app = FastAPI()
-
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    with open("static/index.html", "r") as file:
+        content = file.read()
+    return HTMLResponse(content=content)
 
 @app.get("/getFirst")
 async def get_first_entry():
