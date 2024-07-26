@@ -1,8 +1,10 @@
 
 
-function draw() {}function setup() {
-    createCanvas(windowWidth * 0.9,windowHeight * 0.9)
-    background(220)
+function setup() {
+
+    canvas = createCanvas(windowWidth * 0.9,windowHeight * 0.9)
+    canvas.parent("canvasdiv")
+    background(240)
 
     fetch("/get",{method: "GET"})
     .then(res => res.json())
