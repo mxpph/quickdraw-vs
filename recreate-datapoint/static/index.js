@@ -4,8 +4,11 @@ function setup() {
 
     canvas = createCanvas(windowWidth * 0.9,windowHeight * 0.9)
     canvas.parent("canvasdiv")
-    background(240)
+    fetchDrawing()
+    setInterval(fetchDrawing,1000)
+}
 
+function fetchDrawing() {
     fetch("/get",{method: "GET"})
     .then(res => res.json())
     .then(data => {
@@ -14,6 +17,7 @@ function setup() {
 }
 
 function drawThing(data) {
+    background(240)
     noFill()
     stroke(0)
     strokeWeight(3)
