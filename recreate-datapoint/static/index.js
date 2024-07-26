@@ -4,7 +4,7 @@ function draw() {}function setup() {
     createCanvas(1000,1000)
     background(220)
 
-    fetch("/getFirst",{method: "GET"})
+    fetch("/get",{method: "GET"})
     .then(res => res.json())
     .then(data => {
         drawThing(data)
