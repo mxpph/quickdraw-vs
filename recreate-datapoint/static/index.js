@@ -1,7 +1,7 @@
 
 
 function draw() {}function setup() {
-    createCanvas(1000,1000)
+    createCanvas(windowWidth * 0.9,windowHeight * 0.9)
     background(220)
 
     fetch("/get",{method: "GET"})

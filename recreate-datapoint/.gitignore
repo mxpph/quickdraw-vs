@@ -1,0 +1,4 @@
+# Raw data from the codebase
+full_raw_paperclip.ndjson
+__pycache__
+node_modules
