@@ -1,11 +1,19 @@
-
-
 function setup() {
 
     canvas = createCanvas(windowWidth * 0.9,windowHeight * 0.9)
     canvas.parent("canvasdiv")
-    fetchDrawing()
-    
+    // fetchDrawing()
+
+    const newGameButton = document.getElementById("newgame")
+    newGameButton.addEventListener("click", newGame)
+}
+
+function newGame() {
+    fetch("/create_game",{method: "GET"})
+    .then(res => res.json())
+    .then(data => {
+        console.log(`New game with ID: ${data.game_id}`)
+    })
 }
 
 function fetchDrawing() {
