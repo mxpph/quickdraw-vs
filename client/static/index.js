@@ -4,17 +4,36 @@ function setup() {
     canvas.parent("canvasdiv")
     // fetchDrawing()
 
-    const newGameButton = document.getElementById("newgame")
-    newGameButton.addEventListener("click", newGame)
+
+    document.getElementById('gameForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const gameId = document.getElementById('game_id').value;
+        const playerName = document.getElementById('player_name').value;
+
+        const data = {
+            game_id: gameId,
+            player_name: playerName
+        };
+
+        fetch('http://localhost:8000/create-game', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log('Success:', result);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
 }
 
-function newGame() {
-    fetch("/create_game",{method: "GET"})
-    .then(res => res.json())
-    .then(data => {
-        console.log(`New game with ID: ${data.game_id}`)
-    })
-}
 
 function fetchDrawing() {
     fetch("/get",{method: "GET"})
