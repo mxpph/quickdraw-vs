@@ -1,5 +1,5 @@
-css:
-	@npx tailwindcss -i ./static/input.css -o ./static/output.css --watch
+run:
+	@npm run dev
 
-cssbuild:
-	@npx tailwindcss -i ./static/input.css -o ./static/output.css --build
+build:
+	@npm run build
