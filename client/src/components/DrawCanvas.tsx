@@ -1,29 +1,15 @@
-import * as React from "react";
-import { P5CanvasInstance, ReactP5Wrapper } from "@p5-wrapper/react"
+import { Stage, Layer, Rect, Text } from 'react-konva';
+// import Konva from 'konva';
 
-
-// const { height, width } = x/x/();
-function sketch(p5: P5CanvasInstance) {
-
-
-    p5.setup = () => {
-        // p5.createCanvas(window.innerWidth * 0.9,window.innerHeight * 0.9)
-        p5.createCanvas(500,500,p5.WEBGL)
-        p5.background(240)
-        // fetchDrawing()
-    }
-
-    p5.draw = () => {
-        p5.background(240);
-        p5.normalMaterial();
-        p5.push();
-        p5.rotateZ(p5.frameCount * 0.01);
-        p5.rotateX(p5.frameCount * 0.01);
-        p5.rotateY(p5.frameCount * 0.01);
-        p5.plane(100);
-        p5.pop();
-    };
-}
+export default function App() {
+  return (
+    <Stage width={window.innerWidth*0.9} height={window.innerHeight*0.9}>
+      <Layer>
+        <Rect width={100} height={100} fill="red" />
+      </Layer>
+    </Stage>
+  );
+};
 
 // function newGame() {
 //     fetch("/create_game",{method: "GET"})
@@ -84,10 +70,3 @@ function sketch(p5: P5CanvasInstance) {
 //     curpoint = 0
 //     curdrawing = data.drawing
 // }
-
-
-export default function DrawingCanvas() {
-    return (
-        <ReactP5Wrapper sketch={sketch} />
-    );
-}

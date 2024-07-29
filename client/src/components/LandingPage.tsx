@@ -1,5 +1,9 @@
-import DrawingCanvas from "./DrawCanvas"
+'use client';
+import dynamic from 'next/dynamic';
 
+const Canvas = dynamic(() => import('./DrawCanvas'), {
+  ssr: false,
+});
 
 export default function LandingPage() {
     return(
@@ -10,7 +14,7 @@ export default function LandingPage() {
                     New game
                 </button>
                 <div className="outline outline-2 outline-offset-2 outline-blue-500 rounded-xl overflow-hidden w-[90vw] shadow-xl grid place-items-center" id="canvasdiv">
-                    <DrawingCanvas />
+                    <Canvas />
                 </div>
             </div>
         </div>
