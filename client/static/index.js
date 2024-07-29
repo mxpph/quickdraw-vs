@@ -3,11 +3,7 @@ function setup() {
     canvas = createCanvas(windowWidth * 0.9,windowHeight * 0.9)
     canvas.parent("canvasdiv")
     // fetchDrawing()
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 059a3c162b6d182a8e143348b8a3d984f70c0016
+    
     document.getElementById('gameForm').addEventListener('submit', function(event) {
         event.preventDefault();
 
@@ -34,10 +30,6 @@ function setup() {
             console.error('Error:', error);
         });
     });
-<<<<<<< HEAD
-=======
-
->>>>>>> 059a3c162b6d182a8e143348b8a3d984f70c0016
 }
 
 
