@@ -1,11 +1,11 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-WORKDIR /app
+WORKDIR /code
 
-COPY ./app /app
+COPY ./requirements.txt /code/requirements.txt
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-EXPOSE 8000
+COPY ./app /code/app
 
-CMD ["python", "main.py"]
+CMD ["fastapi", "run", "app/main.py", "--port", "8000"]
