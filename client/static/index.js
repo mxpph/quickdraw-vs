@@ -3,7 +3,7 @@ function setup() {
     canvas = createCanvas(windowWidth * 0.9,windowHeight * 0.9)
     canvas.parent("canvasdiv")
     // fetchDrawing()
-    
+
     document.getElementById('gameForm').addEventListener('submit', function(event) {
         event.preventDefault();
 
