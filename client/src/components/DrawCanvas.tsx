@@ -1,15 +1,15 @@
-import { Stage, Layer, Rect, Text } from 'react-konva';
+import { Stage, Layer, Rect, Text } from "react-konva";
 // import Konva from 'konva';
 
 export default function App() {
   return (
-    <Stage width={window.innerWidth*0.9} height={window.innerHeight*0.9}>
+    <Stage width={window.innerWidth * 0.9} height={window.innerHeight * 0.9}>
       <Layer>
         <Rect width={100} height={100} fill="red" />
       </Layer>
     </Stage>
   );
-};
+}
 
 // function newGame() {
 //     fetch("/create_game",{method: "GET"})
