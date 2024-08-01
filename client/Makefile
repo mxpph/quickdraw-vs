@@ -1,6 +1,7 @@
-NEXTPROD = NO
+NEXTPROD = YES
 export NEXTPROD
 
+run: NEXTPROD = NO
 run:
 	@npm run dev
 

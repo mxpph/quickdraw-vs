@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 
-const isBuild = process.env.NEXTPROD === 'YES'
+const isBuild = process.env.NEXTPROD === 'NO'
 
 const nextConfig = {
-  assetPrefix: isBuild ? './static' : undefined,
+  assetPrefix: isBuild ? undefined : './static',
   reactStrictMode: true,
   output: 'export',
 };
