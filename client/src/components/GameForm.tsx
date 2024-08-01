@@ -11,6 +11,7 @@ let handleSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
 
   fetch("http://localhost:8000/create-game", {
     method: "POST",
+    redirect: "follow",
     headers: {
       "Content-Type": "application/json",
     },

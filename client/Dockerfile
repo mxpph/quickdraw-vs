@@ -15,5 +15,5 @@ COPY . .
 # Build the app
 RUN npm run build
 
-# Serve the app
-CMD ["npm", "start"]
+# # Serve the app
+# CMD ["npm", "start"]

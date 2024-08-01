@@ -26,3 +26,5 @@ recreate-datapoint/
 **/__pycache__
 .vscode
 client/.next
+client/out
+server/app/out
