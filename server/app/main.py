@@ -13,6 +13,8 @@ from fastapi import (
 )
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import json
 import uuid
@@ -23,6 +25,12 @@ class GameData(BaseModel):
 
 
 app = FastAPI()
+
+pathToStatic = os.getcwd()
+pathToStatic = os.path.dirname(pathToStatic)
+pathToStatic = os.path.join(pathToStatic,"client","out")#,"_next","static")
+
+app.mount("/static", StaticFiles(directory=pathToStatic), name="static")
 
 origins = [
     "http://localhost:3000",
@@ -36,6 +44,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    # Ngl I have no idea if theres an easier way or not. But it works.
+    with open(os.path.join(pathToStatic,"index.html"), "r") as file:
+        content = file.read()
+    return HTMLResponse(content=content)
+
+@app.get("/game")
+async def root():
+    with open(os.path.join(pathToStatic,"game.html"), "r") as file:
+        content = file.read()
+    return HTMLResponse(content=content)
+
 redis_client = None
 
 try:
@@ -46,7 +67,7 @@ try:
 except Exception as e:
     logging.error(f"Failed to connect to Redis: {e}")
 
-@app.websocket("/game")
+@app.websocket("/game") # Maybe call this /wsgame to seperate from /game -> game.html? idk
 async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str):
     if not redis_client:
         logging.error("game: Redis is not available")
