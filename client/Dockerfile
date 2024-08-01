@@ -1,5 +1,4 @@
-# Switch to alpine in the future
-FROM node
+FROM node:alpine
 
 WORKDIR /app
 
