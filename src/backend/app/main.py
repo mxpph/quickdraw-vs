@@ -9,12 +9,12 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
     WebSocketException,
-    status
+    status,
+    Request,
 )
-from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from pydantic import BaseModel
 import json
 import uuid
@@ -23,14 +23,7 @@ class GameData(BaseModel):
     game_id: str | None = None
     player_name: str
 
-
 app = FastAPI()
-
-pathToStatic = os.getcwd()
-pathToStatic = os.path.dirname(pathToStatic)
-pathToStatic = os.path.join(pathToStatic,"client","out")#,"_next","static")
-
-app.mount("/static", StaticFiles(directory=pathToStatic), name="static")
 
 origins = [
     "http://localhost:3000",
@@ -44,21 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    # Ngl I have no idea if theres an easier way or not. But it works.
-    with open(os.path.join(pathToStatic,"index.html"), "r") as file:
-        content = file.read()
-    return HTMLResponse(content=content)
-
-@app.get("/game")
-async def root():
-    with open(os.path.join(pathToStatic,"game.html"), "r") as file:
-        content = file.read()
-    return HTMLResponse(content=content)
-
 redis_client = None
-
 try:
     redis_client = redis.Redis(host=os.getenv("REDIS_HOST") or "localhost",
                                port=int(os.getenv("REDIS_PORT") or 6379),
@@ -67,7 +46,7 @@ try:
 except Exception as e:
     logging.error(f"Failed to connect to Redis: {e}")
 
-@app.websocket("/game") # Maybe call this /wsgame to seperate from /game -> game.html? idk
+@app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str):
     if not redis_client:
         logging.error("game: Redis is not available")
@@ -90,7 +69,6 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
             logging.info(f"More than 2 players found, starting")
             game_data["status"] = "playing"
             redis_client.set(f"game:{game_id}", json.dumps(game_data))
-            started = True
         else:
             raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
                                      reason="Game has already started")
@@ -103,7 +81,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str)
         await redis_client.lrem(f"game:{game_id}:players", -1, player_id) # type: ignore
 
 @app.post("/create-game")
-async def create_game(data: GameData):
+async def create_game(data: GameData, request: Request):
     if not redis_client:
         logging.error("create_game: Redis is not available")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -125,8 +103,13 @@ async def create_game(data: GameData):
         }
         await redis_client.rpush(f"game:{game_id}:players", json.dumps(player_data)) # type: ignore
         logging.info(f"Created new host player")
-        url = f"{app.url_path_for('websocket_endpoint')}?game_id={game_id}&player_id={player_id}"
-        return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+        url = f"{request.url.scheme}://{request.url.netloc}/game.html?game_id={game_id}&player_id={player_id}"
+        return {"url": url}
     except Exception as e:
         logging.error(f"create_game: Error creating game: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# These have to come after or the endpoints are overriden and incorrectly
+# routed.
+NEXT_DIR = "/quickdraw/out"
+app.mount("/", StaticFiles(directory=NEXT_DIR, html = True), name="static")

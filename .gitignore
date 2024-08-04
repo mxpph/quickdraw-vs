@@ -25,6 +25,6 @@ yarn-error.log*
 recreate-datapoint/
 **/__pycache__
 .vscode
-client/.next
-client/out
-server/app/out
+src/client/.next
+src/client/out
+src/server/app/out
