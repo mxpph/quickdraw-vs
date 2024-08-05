@@ -28,4 +28,3 @@ recreate-datapoint/
 frontend/.next
 frontend/out
 backend/app/out
-client
