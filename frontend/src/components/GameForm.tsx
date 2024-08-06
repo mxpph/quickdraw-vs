@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useState } from "react"
+import Cookies from 'js-cookie'
 
 export default function GameForm() {
 
@@ -15,7 +16,7 @@ export default function GameForm() {
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+    event.preventDefault()
 
     try {
       const response = await fetch("http://localhost:3000/create-game", {
@@ -24,17 +25,23 @@ export default function GameForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-      });
-
+      })
       if (response.ok) {
         const result = await response.json()
-        window.location.href = result.url
+        const inFiveMinutes = new Date(new Date().getTime() + 5 * 60 * 1000)
+        Cookies.set('quickdrawvs_game_id', result.game_id, {
+            expires: inFiveMinutes
+        })
+        Cookies.set('quickdrawvs_player_id', result.player_id, {
+            expires: inFiveMinutes
+        })
+        window.location.href = `/game.html`
       } else {
         const errorText = await response.text()
         throw new Error(`Network response was not ok: ${response.statusText}, ${errorText}`)
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error:", error)
     }
   }
   return (
@@ -67,5 +74,5 @@ export default function GameForm() {
         Create Game
       </button>
     </form>
-  );
+  )
 }

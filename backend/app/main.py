@@ -14,7 +14,6 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, FileResponse
 from pydantic import BaseModel
 import json
 import uuid
@@ -46,11 +45,26 @@ try:
 except Exception as e:
     logging.error(f"Failed to connect to Redis: {e}")
 
+def is_valid_uuid(uuid_string):
+    try:
+        val = uuid.UUID(uuid_string, version=4)
+    except ValueError:
+        return False
+    return str(val) == uuid_string
+
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str):
+async def websocket_endpoint(websocket: WebSocket):
     if not redis_client:
         logging.error("game: Redis is not available")
         raise WebSocketException(code=status.WS_1011_INTERNAL_ERROR)
+    game_id = websocket.cookies.get('quickdrawvs_game_id')
+    player_id = websocket.cookies.get('quickdrawvs_player_id')
+    if game_id is None or player_id is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
+                                 reason="No game information cookie")
+    elif not is_valid_uuid(game_id) or not is_valid_uuid(player_id):
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
+                                 reason="Invalid game information cookie")
     game_data = await redis_client.get(f"game:{game_id}")
     if not game_data:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
@@ -103,8 +117,7 @@ async def create_game(data: GameData, request: Request):
         }
         await redis_client.rpush(f"game:{game_id}:players", json.dumps(player_data)) # type: ignore
         logging.info(f"Created new host player")
-        url = f"{request.url.scheme}://{request.url.netloc}/game.html?game_id={game_id}&player_id={player_id}"
-        return {"url": url}
+        return {"game_id": game_id, "player_id": player_id}
     except Exception as e:
         logging.error(f"create_game: Error creating game: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
