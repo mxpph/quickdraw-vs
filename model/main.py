@@ -224,19 +224,37 @@ svg_string = '''<svg width="813.6" height="731.7" xmlns="http://www.w3.org/2000/
 
 strokes = svg_to_strokes(svg_string)
 
-# print(strokes)
-# print(svgStokesReformat(strokes))
 print(simplifyStrokes(svgStokesReformat(strokes)))
 inp = simplifyStrokes(svgStokesReformat(strokes))
-# print(vector_to_raster([svgStokesReformat(strokes)])[0])
 raster = vector_to_raster([inp])[0]
 grid = raster.reshape((28,28))
 plt.imshow(grid,cmap="gray")
 plt.show()
 
 
+################################
+# HOW TO USE:
 
-# print(strokes_array)
+# FOR INPUT SVG:
+# svgString = ```<svg ...>...</svg>```
+# rawStrokes = svg_to_strokes(svg_string)
+# reformattedStrokes = svgStokesReformat(rawStrokes)
+# simplifiedVector = simplifyStrokes(reformattedStrokes)
+# raster = vector_to_raster([simplifiedVector])[0]
+
+# FOR DATASET:
+# for drawing in unpack_drawings('full_binary_pencil.bin'):
+# simplifiedVector = drawing["image"]
+# raster = vector_to_raster([simplifiedVector])[0]
+
+# VISUALIZATION:
+# grid = raster.reshape((28,28))
+# plt.imshow(grid,cmap="gray")
+# plt.show()
+################################
+
+
+
 
 # for drawing in unpack_drawings('full_binary_pencil.bin'):
 #     raw = drawing["image"]
