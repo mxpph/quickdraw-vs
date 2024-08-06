@@ -9,6 +9,7 @@ from svgpathtools import svg2paths2
 import numpy as np
 from io import StringIO
 from matplotlib import pyplot as plt
+from scipy.spatial.distance import euclidean
 
 from ctypes.macholib import dyld # to fix cairo bug & not have to run: 
                                  # export DYLD_LIBRARY_PATH="/opt/homebrew/opt/cairo/lib:$DYLD_LIBRARY_PATH"
@@ -137,17 +138,98 @@ def svgStokesReformat(input_list):
     
     return result
 
+# Ramer-Douglas-Peucker algorithm
+def rdp(points, epsilon):
+    if len(points) < 3:
+        return points
+
+    start, end = points[0], points[-1]
+    index = -1
+    max_dist = 0
+
+    for i in range(1, len(points) - 1):
+        dist = np.abs(np.cross(end-start, points[i]-start) / np.linalg.norm(end-start))
+        if dist > max_dist:
+            index = i
+            max_dist = dist
+
+    if max_dist > epsilon:
+        results = rdp(points[:index+1], epsilon)[:-1] + rdp(points[index:], epsilon)
+        return results
+    else:
+        return [start, end]
+
+def resample_stroke(stroke, spacing=1.0):
+    resampled = [stroke[0]]
+    accumulated_distance = 0.0
+    for i in range(1, len(stroke)):
+        point_a = np.array(stroke[i - 1])
+        point_b = np.array(stroke[i])
+        segment_distance = euclidean(point_a, point_b)
+        while accumulated_distance + segment_distance >= spacing:
+            t = (spacing - accumulated_distance) / segment_distance
+            new_point = point_a + t * (point_b - point_a)
+            resampled.append(tuple(new_point))
+            point_a = new_point
+            segment_distance = euclidean(point_a, point_b)
+            accumulated_distance = 0.0
+        accumulated_distance += segment_distance
+    resampled.append(stroke[-1])
+    return resampled
+
+def normalize_strokes(strokes):
+    all_points = [point for stroke in strokes for point in zip(stroke[0], stroke[1])]
+    min_x = min(point[0] for point in all_points)
+    min_y = min(point[1] for point in all_points)
+    max_x = max(point[0] for point in all_points)
+    max_y = max(point[1] for point in all_points)
+
+    width = max_x - min_x
+    height = max_y - min_y
+    max_dim = max(width, height)
+    scale = 255.0 / max_dim
+
+    normalized_strokes = []
+    for stroke in strokes:
+        x_coords = [math.floor((x - min_x) * scale) for x in stroke[0]]
+        y_coords = [math.floor((y - min_y) * scale) for y in stroke[1]]
+        normalized_strokes.append((x_coords, y_coords))
+
+    return normalized_strokes
+
+def simplifyStrokes(input_strokes, epsilon=2.0):
+    # Normalize strokes
+    normalized_strokes = normalize_strokes(input_strokes)
+
+    # Resample strokes
+    resampled_strokes = [resample_stroke(list(zip(stroke[0], stroke[1]))) for stroke in normalized_strokes]
+
+    # Simplify strokes
+    simplified_strokes = []
+    for stroke in resampled_strokes:
+        stroke_array = np.array(stroke)
+        simplified = rdp(stroke_array, epsilon)
+        x_coords, y_coords = zip(*simplified)
+        simplified_strokes.append((x_coords, y_coords))
+
+    return simplified_strokes
+
 # Example usage
-svg_string = '''<svg height="210" width="400">
-  <path d="M150 0 L75 200 L225 200 Z" />
-</svg>'''
+svg_string = '''<svg width="813.6" height="731.7" xmlns="http://www.w3.org/2000/svg">
+<path d="M 225.90962166314577 147.06121272302124 L 224.90912233531785 147.06121272302124 L 224.90912233531785 151.06287837534833 L 224.90912233531785 168.06995739773856 L 224.90912233531785 202.08411544251896 L 224.90912233531785 251.10451968352604 L 224.90912233531785 299.1245075114513" fill="none" stroke="black" stroke-width="2" />
+<path d="M 473.03295563664295 161.0670425061661 L 473.03295563664295 163.06787533232966 L 473.03295563664295 182.07578718088342 L 473.03295563664295 231.0961914218905 L 475.0339542922988 307.12783881610557 L 478.0354522757826 382.1590697972388" fill="none" stroke="black" stroke-width="2" />
+<path d="M 251.92260418667178 463.19279925686277 L 251.92260418667178 463.19279925686277 L 250.92210485884385 464.19321566994455 L 250.92210485884385 470.19571414843523 L 250.92210485884385 490.20404241007077 L 251.92260418667178 523.2177840417694 L 262.92809679277894 559.2327749127134 L 285.9395813328212 593.2469329574939 L 320.95705780679856 617.2569268714565 L 359.97653159208755 627.2610910022743 L 396.99500672172076 627.2610910022743 L 434.01348185135396 615.2560940452929 L 462.0274630305358 581.2419360005125 L 474.0334549644709 536.2231974118325 L 477.03495294795465 489.203625996989 L 470.0314576531592 437.1819725167366" fill="none" stroke="black" stroke-width="2" />
+</svg>
+'''
 
 strokes = svg_to_strokes(svg_string)
 
 # print(strokes)
-print(svgStokesReformat(strokes))
-print(vector_to_raster([svgStokesReformat(strokes)])[0])
-raster = vector_to_raster([svgStokesReformat(strokes)])[0]
+# print(svgStokesReformat(strokes))
+print(simplifyStrokes(svgStokesReformat(strokes)))
+inp = simplifyStrokes(svgStokesReformat(strokes))
+# print(vector_to_raster([svgStokesReformat(strokes)])[0])
+raster = vector_to_raster([inp])[0]
 grid = raster.reshape((28,28))
 plt.imshow(grid,cmap="gray")
 plt.show()
