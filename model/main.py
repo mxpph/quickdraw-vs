@@ -2,8 +2,12 @@ import struct
 from struct import unpack
 import os
 import time
+import math
 import random
+import svgpathtools
+from svgpathtools import svg2paths2
 import numpy as np
+from io import StringIO
 from matplotlib import pyplot as plt
 
 from ctypes.macholib import dyld # to fix cairo bug & not have to run: 
@@ -95,13 +99,69 @@ def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_co
     
     return raster_images
 
-for drawing in unpack_drawings('full_binary_pencil.bin'):
-    raw = drawing["image"]
-    print(raw)
-    raster = vector_to_raster([raw])[0]
-    grid = raster.reshape((28,28))
-    plt.imshow(grid,cmap="gray")
-    plt.show()
-    # break
-    time.sleep(2)
-    plt.close()
+
+def svg_to_strokes(svg_string):
+    file_like = StringIO(svg_string)
+    paths, attributes, svg_attributes = svg2paths2(file_like)
+    strokes = []
+
+    for path in paths:
+        for segment in path:
+            if isinstance(segment, svgpathtools.path.Line):
+                strokes.append([(segment.start.real, segment.start.imag), (segment.end.real, segment.end.imag)])
+            elif isinstance(segment, svgpathtools.path.CubicBezier):
+                strokes.append([(segment.start.real, segment.start.imag),
+                                (segment.control1.real, segment.control1.imag),
+                                (segment.control2.real, segment.control2.imag),
+                                (segment.end.real, segment.end.imag)])
+            elif isinstance(segment, svgpathtools.path.QuadraticBezier):
+                strokes.append([(segment.start.real, segment.start.imag),
+                                (segment.control.real, segment.control.imag),
+                                (segment.end.real, segment.end.imag)])
+            elif isinstance(segment, svgpathtools.path.Arc):
+                strokes.append([(segment.start.real, segment.start.imag),
+                                (segment.radius.real, segment.radius.imag),
+                                (segment.rotation),
+                                (segment.arc),
+                                (segment.sweep),
+                                (segment.end.real, segment.end.imag)])
+    return strokes
+
+def svgStokesReformat(input_list):
+    result = []
+
+    for stroke in input_list:
+        x_coords = [math.floor(coord[0]) for coord in stroke]
+        y_coords = [math.floor(coord[1]) for coord in stroke]
+        result.append((tuple(x_coords), tuple(y_coords)))
+    
+    return result
+
+# Example usage
+svg_string = '''<svg height="210" width="400">
+  <path d="M150 0 L75 200 L225 200 Z" />
+</svg>'''
+
+strokes = svg_to_strokes(svg_string)
+
+# print(strokes)
+print(svgStokesReformat(strokes))
+print(vector_to_raster([svgStokesReformat(strokes)])[0])
+raster = vector_to_raster([svgStokesReformat(strokes)])[0]
+grid = raster.reshape((28,28))
+plt.imshow(grid,cmap="gray")
+plt.show()
+
+
+
+# print(strokes_array)
+
+# for drawing in unpack_drawings('full_binary_pencil.bin'):
+#     raw = drawing["image"]
+#     print(raw)
+#     raster = vector_to_raster([raw])[0]
+#     print(raster)
+# #     grid = raster.reshape((28,28))
+# #     plt.imshow(grid,cmap="gray")
+# #     plt.show()
+#     break
