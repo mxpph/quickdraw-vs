@@ -69,9 +69,9 @@ export default function GameForm() {
       />
       <button
         type="submit"
-        className="bg-blue-400 mt-4 font-semibold text-white rounded-lg p-2"
+        className="bg-primary mt-4 font-semibold text-white rounded-lg p-2"
       >
-        Create Game
+        Join Game
       </button>
     </form>
   )
