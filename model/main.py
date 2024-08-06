@@ -1,6 +1,8 @@
 import struct
 from struct import unpack
 import os
+import time
+import random
 import numpy as np
 from matplotlib import pyplot as plt
 import cairocffi as cairo
@@ -31,7 +33,7 @@ def unpack_drawing(file_handle):
 
 def unpack_drawings(filename):
     path = os.getcwd()
-    path = os.path.join(path,"trainingdata",filename)
+    path = os.path.join(path,"model","trainingdata",filename)
     with open(path, 'rb') as f:
         while True:
             try:
@@ -88,7 +90,12 @@ def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_co
     return raster_images
 
 for drawing in unpack_drawings('full_binary_pencil.bin'):
-    print(vector_to_raster(drawing["image"])) # Image as set of point
-    # plt.imshow(np.asarray(drawing['image']), cmap='gray')
-    # plt.show()
-    break
+    raw = drawing["image"]
+    raster = vector_to_raster([raw])[0]
+    grid = raster.reshape((28,28))
+    plt.imshow(grid)
+    plt.show()
+    # break
+    time.sleep(2)
+    plt.close()
+    
