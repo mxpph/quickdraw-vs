@@ -5,6 +5,12 @@ import time
 import random
 import numpy as np
 from matplotlib import pyplot as plt
+
+from ctypes.macholib import dyld # to fix cairo bug & not have to run: 
+                                 # export DYLD_LIBRARY_PATH="/opt/homebrew/opt/cairo/lib:$DYLD_LIBRARY_PATH"
+                                 # Should be macos only tho. thread: https://github.com/Kozea/CairoSVG/issues/354
+dyld.DEFAULT_LIBRARY_FALLBACK.append("/opt/homebrew/lib")
+
 import cairocffi as cairo
 
 
@@ -91,11 +97,11 @@ def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_co
 
 for drawing in unpack_drawings('full_binary_pencil.bin'):
     raw = drawing["image"]
+    print(raw)
     raster = vector_to_raster([raw])[0]
     grid = raster.reshape((28,28))
-    plt.imshow(grid)
+    plt.imshow(grid,cmap="gray")
     plt.show()
     # break
     time.sleep(2)
     plt.close()
-    
