@@ -68,18 +68,18 @@ async def websocket_endpoint(websocket: WebSocket):
     game_data = await redis_client.get(f"game:{game_id}")
     if not game_data:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-    players = await redis_client.lrange(f"game:{game_id}:players", 0, -1) # type: ignore
-    if player_id not in players: # type: ignore
+    players = await redis_client.lrange(f"game:{game_id}:players", 0, -1)
+    if player_id not in players:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
     await websocket.accept()
     logging.info("Websocket connection accepted.")
     try:
-        game_data = json.loads(await redis_client.get(f"game:{game_id}")) # type: ignore
+        game_data = json.loads(await redis_client.get(f"game:{game_id}"))
         if game_data["status"] == "waiting":
-            nplayers = await redis_client.llen(f"game:{game_id}:players") # type: ignore
-            while nplayers < 2: # type: ignore
+            nplayers = await redis_client.llen(f"game:{game_id}:players")
+            while nplayers < 2:
                 await asyncio.sleep(1)
-                nplayers = await redis_client.llen(f"game:{game_id}:players") # type: ignore
+                nplayers = await redis_client.llen(f"game:{game_id}:players")
             logging.info(f"More than 2 players found, starting")
             game_data["status"] = "playing"
             redis_client.set(f"game:{game_id}", json.dumps(game_data))
@@ -92,7 +92,7 @@ async def websocket_endpoint(websocket: WebSocket):
             pass
         await websocket.close()
     except WebSocketDisconnect:
-        await redis_client.lrem(f"game:{game_id}:players", -1, player_id) # type: ignore
+        await redis_client.lrem(f"game:{game_id}:players", -1, player_id)
 
 @app.post("/create-game")
 async def create_game(data: GameData, request: Request):
@@ -115,7 +115,7 @@ async def create_game(data: GameData, request: Request):
             "name": data.player_name,
             "id": player_id,
         }
-        await redis_client.rpush(f"game:{game_id}:players", json.dumps(player_data)) # type: ignore
+        await redis_client.rpush(f"game:{game_id}:players", json.dumps(player_data))
         logging.info(f"Created new host player")
         return {"game_id": game_id, "player_id": player_id}
     except Exception as e:
