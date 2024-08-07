@@ -214,7 +214,7 @@ def simplifyStrokes(input_strokes, epsilon=2.0):
 
     return simplified_strokes
 
-# Example usage
+
 svg_string = '''<svg width="813.6" height="731.7" xmlns="http://www.w3.org/2000/svg">
 <path d="M 225.90962166314577 147.06121272302124 L 224.90912233531785 147.06121272302124 L 224.90912233531785 151.06287837534833 L 224.90912233531785 168.06995739773856 L 224.90912233531785 202.08411544251896 L 224.90912233531785 251.10451968352604 L 224.90912233531785 299.1245075114513" fill="none" stroke="black" stroke-width="2" />
 <path d="M 473.03295563664295 161.0670425061661 L 473.03295563664295 163.06787533232966 L 473.03295563664295 182.07578718088342 L 473.03295563664295 231.0961914218905 L 475.0339542922988 307.12783881610557 L 478.0354522757826 382.1590697972388" fill="none" stroke="black" stroke-width="2" />
@@ -255,6 +255,30 @@ plt.show()
 
 
 
+# dict1 = {
+#     0: "basketball",
+#     1: "hammer",
+#     2: "paperclip",
+#     3: "pencil",
+# }
+
+# dict2 = {
+#     "basketball": [],
+#     "hammer": [],
+#     "paperclip": [],
+#     "pencil": [],
+# }
+
+
+# for item in dict2.keys():
+#     i = 0
+#     for drawing in unpack_drawings('full_binary_'+str(item)+'.bin'):
+#         simplifiedVector = drawing["image"]
+#         raster = vector_to_raster([simplifiedVector])[0]
+#         dict2[item].append(raster)
+#         i += 1
+#         if i > 5000:
+#             break
 
 # for drawing in unpack_drawings('full_binary_pencil.bin'):
 #     raw = drawing["image"]
