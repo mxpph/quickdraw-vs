@@ -13,10 +13,16 @@ export default function GamePage() {
 
   socket.onopen = (event) => {
     console.log("WebSocket connected!")
+
+    socket.send(JSON.stringify({"type": "test"}))
   }
 
   socket.onerror = (event) => {
     setErrorShown(true)
+  }
+
+  socket.onmessage = (event) => {
+    console.log(event.data)
   }
 
   socket.onclose = (event) => {
