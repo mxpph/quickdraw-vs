@@ -10,6 +10,18 @@ import numpy as np
 from io import StringIO
 from matplotlib import pyplot as plt
 from scipy.spatial.distance import euclidean
+from collections import OrderedDict
+
+# from PIL import Image, ImageDraw, ImageOps
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+import torch
+from torch import nn
+from torch import optim
+import torch.nn.functional as F
+from torchvision import datasets, transforms
 
 from ctypes.macholib import dyld # to fix cairo bug & not have to run: 
                                  # export DYLD_LIBRARY_PATH="/opt/homebrew/opt/cairo/lib:$DYLD_LIBRARY_PATH"
@@ -17,7 +29,6 @@ from ctypes.macholib import dyld # to fix cairo bug & not have to run:
 dyld.DEFAULT_LIBRARY_FALLBACK.append("/opt/homebrew/lib")
 
 import cairocffi as cairo
-
 
 def unpack_drawing(file_handle):
     key_id, = unpack('Q', file_handle.read(8))
@@ -222,14 +233,14 @@ svg_string = '''<svg width="813.6" height="731.7" xmlns="http://www.w3.org/2000/
 </svg>
 '''
 
-strokes = svg_to_strokes(svg_string)
+# strokes = svg_to_strokes(svg_string)
 
-print(simplifyStrokes(svgStokesReformat(strokes)))
-inp = simplifyStrokes(svgStokesReformat(strokes))
-raster = vector_to_raster([inp])[0]
-grid = raster.reshape((28,28))
-plt.imshow(grid,cmap="gray")
-plt.show()
+# print(simplifyStrokes(svgStokesReformat(strokes)))
+# inp = simplifyStrokes(svgStokesReformat(strokes))
+# raster = vector_to_raster([inp])[0]
+# grid = raster.reshape((28,28))
+# plt.imshow(grid,cmap="gray")
+# plt.show()
 
 
 ################################
@@ -255,30 +266,352 @@ plt.show()
 
 
 
-# dict1 = {
-#     0: "basketball",
-#     1: "hammer",
-#     2: "paperclip",
-#     3: "pencil",
-# }
+label_dict = {
+    0: "basketball",
+    1: "hammer",
+    2: "paperclip",
+    3: "pencil",
+}
 
-# dict2 = {
-#     "basketball": [],
-#     "hammer": [],
-#     "paperclip": [],
-#     "pencil": [],
-# }
+values_dict = {
+    "basketball": [],
+    "hammer": [],
+    "paperclip": [],
+    "pencil": [],
+}
 
 
-# for item in dict2.keys():
-#     i = 0
-#     for drawing in unpack_drawings('full_binary_'+str(item)+'.bin'):
-#         simplifiedVector = drawing["image"]
-#         raster = vector_to_raster([simplifiedVector])[0]
-#         dict2[item].append(raster)
-#         i += 1
-#         if i > 5000:
-#             break
+for item in values_dict.keys():
+    i = 0
+    for drawing in unpack_drawings('full_binary_'+str(item)+'.bin'):
+        simplifiedVector = drawing["image"]
+        raster = vector_to_raster([simplifiedVector])[0]
+        values_dict[item].append(raster)
+        i += 1
+        if i > 2999:
+            break
+
+
+# randdrawing = values_dict["hammer"][2201].reshape((28,28))
+# plt.imshow(randdrawing)
+# plt.show()
+
+X = []
+y = []
+
+for key, value in label_dict.items():
+    data_i = values_dict[value]
+    Xi = np.concatenate([data_i], axis = 0)
+    yi = np.full((len(Xi), 1), key).ravel()
+    
+    X.append(Xi)
+    y.append(yi)
+
+# print(f"X: {(X)}\n")
+# print(f"Y: {(y)}\n")
+
+X = np.concatenate(X, axis = 0) # IMAGES
+y = np.concatenate(y, axis = 0) # LABELS
+
+print(f"X: {len(X)}\n")
+print(f"Y: {len(y)}\n")
+
+def view_images_grid(X, y):
+    fig, axs = plt.subplots(5, 10, figsize=(20,10))
+    
+    for label_num in range(0,50):
+        r_label = random.randint(0, len(X) - 1)
+        image = X[r_label].reshape((28,28))  #reshape images
+        i = label_num // 10
+        j = label_num % 10
+        axs[i,j].imshow(image) #plot the data
+        axs[i,j].axis('off')
+        axs[i,j].set_title(label_dict[y[r_label]])
+
+    plt.show()
+
+view_images_grid(X,y)
+
+def build_model(input_size, output_size, hidden_sizes, dropout = 0.0):
+    '''
+    Function creates deep learning model based on parameters passed.
+
+    INPUT:
+        input_size, output_size, hidden_sizes - layer sizes
+        dropout - dropout (probability of keeping a node)
+
+    OUTPUT:
+        model - deep learning model
+    '''
+
+    # Build a feed-forward network
+    model = nn.Sequential(OrderedDict([
+                          ('fc1', nn.Linear(input_size, hidden_sizes[0])),
+                          ('relu1', nn.ReLU()),
+                          ('fc2', nn.Linear(hidden_sizes[0], hidden_sizes[1])),
+                          ('bn2', nn.BatchNorm1d(num_features=hidden_sizes[1])),
+                          ('relu2', nn.ReLU()),
+                          ('dropout', nn.Dropout(dropout)),
+                          ('fc3', nn.Linear(hidden_sizes[1], hidden_sizes[2])),
+                          ('bn3', nn.BatchNorm1d(num_features=hidden_sizes[2])),
+                          ('relu3', nn.ReLU()),
+                          ('logits', nn.Linear(hidden_sizes[2], output_size))]))
+
+    return model
+
+def shuffle(X_train, y_train):
+    """
+    Function which shuffles training dataset.
+    INPUT:
+        X_train - (tensor) training set
+        y_train - (tensor) labels for training set
+
+    OUTPUT:
+        X_train_shuffled - (tensor) shuffled training set
+        y_train_shuffled - (tensor) shuffled labels for training set
+    """
+    X_train_shuffled = X_train.numpy()
+    y_train_shuffled = y_train.numpy().reshape((X_train.shape[0], 1))
+
+    permutation = list(np.random.permutation(X_train.shape[0]))
+    X_train_shuffled = X_train_shuffled[permutation, :]
+    y_train_shuffled = y_train_shuffled[permutation, :].reshape((X_train.shape[0], 1))
+
+    X_train_shuffled = torch.from_numpy(X_train_shuffled).float()
+    y_train_shuffled = torch.from_numpy(y_train_shuffled).long()
+
+    return X_train_shuffled, y_train_shuffled
+
+def fit_model(model, X_train, y_train, epochs = 100, n_chunks = 1000, learning_rate = 0.003, weight_decay = 0, optimizer = 'SGD'):
+    """
+    Function which fits the model.
+
+    INPUT:
+        model - pytorch model to fit
+        X_train - (tensor) train dataset
+        y_train - (tensor) train dataset labels
+        epochs - number of epochs
+        n_chunks - number of chunks to cplit the dataset
+        learning_rate - learning rate value
+
+    OUTPUT: None
+    """
+
+    print("Fitting model with epochs = {epochs}, learning rate = {lr}\n"\
+    .format(epochs = epochs, lr = learning_rate))
+
+    criterion = nn.CrossEntropyLoss()
+
+    if (optimizer == 'SGD'):
+        optimizer = optim.SGD(model.parameters(), lr=learning_rate, weight_decay= weight_decay)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay= weight_decay)
+
+    print_every = 10
+
+    steps = 0
+
+    for e in range(epochs):
+        running_loss = 0
+
+        X_train, y_train = shuffle(X_train, y_train)
+
+        images = torch.chunk(X_train, n_chunks)
+        labels = torch.chunk(y_train, n_chunks)
+
+        for i in range(n_chunks):
+            steps += 1
+
+            optimizer.zero_grad()
+
+            # Forward and backward passes
+            output = model.forward(images[i])
+            loss = criterion(output, labels[i].squeeze())
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+        
+        if epochs % print_every == 0:
+            print("Epoch: {}/{}... ".format(e+1, epochs),
+                  "Loss: {:.4f}".format(running_loss/print_every))
+
+            running_loss = 0
+                
+                
+def view_classify(img, ps):
+    """
+    Function for viewing an image and it's predicted classes
+    with matplotlib.
+
+    INPUT:
+        img - (tensor) image file
+        ps - (tensor) predicted probabilities for each class
+    """
+    ps = ps.data.numpy().squeeze()
+
+    fig, (ax1, ax2) = plt.subplots(figsize=(6,9), ncols=2)
+    ax1.imshow(img.resize_(1, 28, 28).numpy().squeeze())
+    ax1.axis('off')
+    ax2.barh(np.arange(10), ps)
+    ax2.set_aspect(0.1)
+    ax2.set_yticks(np.arange(10))
+    ax2.set_yticklabels(['cannon','eye', 'face', 'nail', 'pear','piano','radio','spider','star','sword'], size='small');
+    ax2.set_title('Class Probability')
+    ax2.set_xlim(0, 1.1)
+
+    plt.tight_layout()
+    plt.show()
+    
+def test_model(model, img):
+    """
+    Function creates test view of the model's prediction for image.
+
+    INPUT:
+        model - pytorch model
+        img - (tensor) image from the dataset
+
+    OUTPUT: None
+    """
+
+    # Convert 2D image to 1D vector
+    img = img.resize_(1, 784)
+
+    ps = get_preds(model, img)
+    view_classify(img.resize_(1, 28, 28), ps)
+
+def get_preds(model, input):
+    """
+    Function to get predicted probabilities from the model for each class.
+
+    INPUT:
+        model - pytorch model
+        input - (tensor) input vector
+
+    OUTPUT:
+        ps - (tensor) vector of predictions
+    """
+
+    # Turn off gradients to speed up this part
+    with torch.no_grad():
+        logits = model.forward(input)
+    ps = F.softmax(logits, dim=1)
+    return ps
+
+def get_labels(pred):
+    """
+        Function to get the vector of predicted labels for the images in
+        the dataset.
+
+        INPUT:
+            pred - (tensor) vector of predictions (probabilities for each class)
+        OUTPUT:
+            pred_labels - (numpy) array of predicted classes for each vector
+    """
+
+    pred_np = pred.numpy()
+    pred_values = np.amax(pred_np, axis=1, keepdims=True)
+    pred_labels = np.array([np.where(pred_np[i, :] == pred_values[i, :])[0] for i in range(pred_np.shape[0])])
+    pred_labels = pred_labels.reshape(len(pred_np), 1)
+
+    return pred_labels
+
+def evaluate_model(model, train, y_train, test, y_test):
+    """
+    Function to print out train and test accuracy of the model.
+
+    INPUT:
+        model - pytorch model
+        train - (tensor) train dataset
+        y_train - (numpy) labels for train dataset
+        test - (tensor) test dataset
+        y_test - (numpy) labels for test dataset
+
+    OUTPUT:
+        accuracy_train - accuracy on train dataset
+        accuracy_test - accuracy on test dataset
+    """
+    train_pred = get_preds(model, train)
+    train_pred_labels = get_labels(train_pred)
+
+    test_pred = get_preds(model, test)
+    test_pred_labels = get_labels(test_pred)
+
+    accuracy_train = accuracy_score(y_train, train_pred_labels)
+    accuracy_test = accuracy_score(y_test, test_pred_labels)
+
+    print("Accuracy score for train set is {} \n".format(accuracy_train))
+    print("Accuracy score for test set is {} \n".format(accuracy_test))
+
+    return accuracy_train, accuracy_test
+
+def plot_learning_curve(input_size, output_size, hidden_sizes, train, labels, y_train, test, y_test, learning_rate = 0.003, weight_decay = 0.0, dropout = 0.0, n_chunks = 1000, optimizer = 'SGD'):
+    """
+    Function to plot learning curve depending on the number of epochs.
+
+    INPUT:
+        input_size, output_size, hidden_sizes - model parameters
+        train - (tensor) train dataset
+        labels - (tensor) labels for train dataset
+        y_train - (numpy) labels for train dataset
+        test - (tensor) test dataset
+        y_test - (numpy) labels for test dataset
+        learning_rate - learning rate hyperparameter
+        weight_decay - weight decay (regularization)
+        dropout - dropout for hidden layer
+        n_chunks - the number of minibatches to train the model
+        optimizer - optimizer to be used for training (SGD or Adam)
+
+    OUTPUT: None
+    """
+    train_acc = []
+    test_acc = []
+
+    for epochs in np.arange(10, 60, 10):
+        # create model
+        model = build_model(input_size, output_size, hidden_sizes, dropout = dropout)
+
+        # fit model
+        fit_model(model, train, labels, epochs = epochs, n_chunks = n_chunks, learning_rate = learning_rate, weight_decay = weight_decay, optimizer = 'SGD')
+        # get accuracy
+        accuracy_train, accuracy_test = evaluate_model(model, train, y_train, test, y_test)
+
+        train_acc.append(accuracy_train)
+        test_acc.append(accuracy_test)
+    
+    return train_acc, test_acc
+
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.3,random_state=1)
+
+train = torch.from_numpy(X_train).float()
+labels = torch.from_numpy(y_train).long()
+test = torch.from_numpy(X_test).float()
+test_labels = torch.from_numpy(y_test).long()
+
+# Set hyperparameters for our network
+input_size = 784
+hidden_sizes = [128, 100, 64]
+output_size = 4
+
+dropout = 0.0
+weight_decay = 0.0
+n_chunks = 700
+learning_rate = 0.03
+optimizer = 'SGD'
+
+model = build_model(input_size, output_size, hidden_sizes, dropout = dropout)
+
+train_acc, test_acc = plot_learning_curve(input_size, output_size, hidden_sizes, train, labels, y_train, test, y_test, learning_rate = learning_rate, dropout = dropout, weight_decay = weight_decay, n_chunks = n_chunks, optimizer = optimizer)
+
+x = np.arange(10, 10 * (len(train_acc) + 1), 10)
+plt.plot(x, train_acc)
+plt.plot(x, test_acc)
+plt.legend(['train', 'test'], loc='upper left')
+plt.title('Accuracy, learning_rate = ' + str(learning_rate), fontsize=14)
+plt.xlabel('Number of epochs', fontsize=11)
+plt.ylabel('Accuracy', fontsize=11)
+plt.show()
+
 
 # for drawing in unpack_drawings('full_binary_pencil.bin'):
 #     raw = drawing["image"]
