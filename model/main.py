@@ -22,6 +22,7 @@ from torch import nn
 from torch import optim
 import torch.nn.functional as F
 from torchvision import datasets, transforms
+import torch.onnx
 
 from ctypes.macholib import dyld # to fix cairo bug & not have to run: 
                                  # export DYLD_LIBRARY_PATH="/opt/homebrew/opt/cairo/lib:$DYLD_LIBRARY_PATH"
@@ -271,6 +272,12 @@ label_dict = {
     1: "hammer",
     2: "paperclip",
     3: "pencil",
+    4: "broom",
+    5: "camera",
+    6: "dog",
+    7: "dresser",
+    8: "hat",
+    9: "hexagon",
 }
 
 values_dict = {
@@ -278,6 +285,12 @@ values_dict = {
     "hammer": [],
     "paperclip": [],
     "pencil": [],
+    "broom": [],
+    "camera": [],
+    "dog": [],
+    "dresser": [],
+    "hat": [],
+    "hexagon": [],
 }
 
 
@@ -288,7 +301,7 @@ for item in values_dict.keys():
         raster = vector_to_raster([simplifiedVector])[0]
         values_dict[item].append(raster)
         i += 1
-        if i > 2999:
+        if i > 9999:
             break
 
 
@@ -313,8 +326,8 @@ for key, value in label_dict.items():
 X = np.concatenate(X, axis = 0) # IMAGES
 y = np.concatenate(y, axis = 0) # LABELS
 
-print(f"X: {len(X)}\n")
-print(f"Y: {len(y)}\n")
+print(f"X: {type(X[0])}, SHAPE:\n")
+print(f"Y: {type(y[0])}\n")
 
 def view_images_grid(X, y):
     fig, axs = plt.subplots(5, 10, figsize=(20,10))
@@ -359,28 +372,28 @@ def build_model(input_size, output_size, hidden_sizes, dropout = 0.0):
 
     return model
 
-def shuffle(X_train, y_train):
-    """
-    Function which shuffles training dataset.
-    INPUT:
-        X_train - (tensor) training set
-        y_train - (tensor) labels for training set
+# def shuffle(X_train, y_train):
+#     """
+#     Function which shuffles training dataset.
+#     INPUT:
+#         X_train - (tensor) training set
+#         y_train - (tensor) labels for training set
 
-    OUTPUT:
-        X_train_shuffled - (tensor) shuffled training set
-        y_train_shuffled - (tensor) shuffled labels for training set
-    """
-    X_train_shuffled = X_train.numpy()
-    y_train_shuffled = y_train.numpy().reshape((X_train.shape[0], 1))
+#     OUTPUT:
+#         X_train_shuffled - (tensor) shuffled training set
+#         y_train_shuffled - (tensor) shuffled labels for training set
+#     """
+#     X_train_shuffled = X_train.numpy()
+#     y_train_shuffled = y_train.numpy().reshape((X_train.shape[0], 1))
 
-    permutation = list(np.random.permutation(X_train.shape[0]))
-    X_train_shuffled = X_train_shuffled[permutation, :]
-    y_train_shuffled = y_train_shuffled[permutation, :].reshape((X_train.shape[0], 1))
+#     permutation = list(np.random.permutation(X_train.shape[0]))
+#     X_train_shuffled = X_train_shuffled[permutation, :]
+#     y_train_shuffled = y_train_shuffled[permutation, :].reshape((X_train.shape[0], 1))
 
-    X_train_shuffled = torch.from_numpy(X_train_shuffled).float()
-    y_train_shuffled = torch.from_numpy(y_train_shuffled).long()
+#     X_train_shuffled = torch.from_numpy(X_train_shuffled).float()
+#     y_train_shuffled = torch.from_numpy(y_train_shuffled).long()
 
-    return X_train_shuffled, y_train_shuffled
+#     return X_train_shuffled, y_train_shuffled
 
 def fit_model(model, X_train, y_train, epochs = 100, n_chunks = 1000, learning_rate = 0.003, weight_decay = 0, optimizer = 'SGD'):
     """
@@ -414,7 +427,7 @@ def fit_model(model, X_train, y_train, epochs = 100, n_chunks = 1000, learning_r
     for e in range(epochs):
         running_loss = 0
 
-        X_train, y_train = shuffle(X_train, y_train)
+        # X_train, y_train = shuffle(X_train, y_train)
 
         images = torch.chunk(X_train, n_chunks)
         labels = torch.chunk(y_train, n_chunks)
@@ -456,14 +469,14 @@ def view_classify(img, ps):
     ax2.barh(np.arange(10), ps)
     ax2.set_aspect(0.1)
     ax2.set_yticks(np.arange(10))
-    ax2.set_yticklabels(['cannon','eye', 'face', 'nail', 'pear','piano','radio','spider','star','sword'], size='small');
+    ax2.set_yticklabels(["basketball","hammer","paperclip","pencil","broom","camera","dog","dresser","hat","hexagon"], size='small');
     ax2.set_title('Class Probability')
     ax2.set_xlim(0, 1.1)
 
     plt.tight_layout()
     plt.show()
     
-def test_model(model, img):
+def test_model(model, img, label):
     """
     Function creates test view of the model's prediction for image.
 
@@ -475,10 +488,23 @@ def test_model(model, img):
     """
 
     # Convert 2D image to 1D vector
-    img = img.resize_(1, 784)
+    # img = img.resize_(1, 784)
 
+    # ps = get_preds(model, img)
+    # view_classify(img.resize_(1, 28, 28), ps)
+
+    img = img.view(1, 784)  # Ensure the image is a 1D vector of size 784
+    
+    # Forward pass through the model to get predictions
     ps = get_preds(model, img)
-    view_classify(img.resize_(1, 28, 28), ps)
+    
+    # View the image and its classification
+    view_classify(img.view(1, 28, 28), ps)
+    
+    # Print the predicted and actual labels
+    _, predicted = torch.max(ps, 1)
+    print(f'Predicted: {predicted.item()}, True: {label.item()}')
+
 
 def get_preds(model, input):
     """
@@ -540,6 +566,9 @@ def evaluate_model(model, train, y_train, test, y_test):
     accuracy_train = accuracy_score(y_train, train_pred_labels)
     accuracy_test = accuracy_score(y_test, test_pred_labels)
 
+    print("Y_TEST ",y_test)
+    print("PRED ",test_pred_labels)
+
     print("Accuracy score for train set is {} \n".format(accuracy_train))
     print("Accuracy score for test set is {} \n".format(accuracy_test))
 
@@ -567,7 +596,7 @@ def plot_learning_curve(input_size, output_size, hidden_sizes, train, labels, y_
     train_acc = []
     test_acc = []
 
-    for epochs in np.arange(10, 60, 10):
+    for epochs in np.arange(80, 90, 10):
         # create model
         model = build_model(input_size, output_size, hidden_sizes, dropout = dropout)
 
@@ -581,7 +610,7 @@ def plot_learning_curve(input_size, output_size, hidden_sizes, train, labels, y_
     
     return train_acc, test_acc
 
-X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.3,random_state=1)
+X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.3,random_state=1,shuffle=True)
 
 train = torch.from_numpy(X_train).float()
 labels = torch.from_numpy(y_train).long()
@@ -590,27 +619,48 @@ test_labels = torch.from_numpy(y_test).long()
 
 # Set hyperparameters for our network
 input_size = 784
-hidden_sizes = [128, 100, 64]
-output_size = 4
+hidden_sizes = [500, 250, 50]
+output_size = 10
 
-dropout = 0.0
+dropout = 0.2
 weight_decay = 0.0
 n_chunks = 700
-learning_rate = 0.03
+learning_rate = 0.003
 optimizer = 'SGD'
 
-model = build_model(input_size, output_size, hidden_sizes, dropout = dropout)
+# model = build_model(input_size, output_size, hidden_sizes, dropout = dropout)
 
-train_acc, test_acc = plot_learning_curve(input_size, output_size, hidden_sizes, train, labels, y_train, test, y_test, learning_rate = learning_rate, dropout = dropout, weight_decay = weight_decay, n_chunks = n_chunks, optimizer = optimizer)
+# train_acc, test_acc = plot_learning_curve(input_size, output_size, hidden_sizes, train, labels, y_train, test, y_test, learning_rate = learning_rate, dropout = dropout, weight_decay = weight_decay, n_chunks = n_chunks, optimizer = optimizer)
 
-x = np.arange(10, 10 * (len(train_acc) + 1), 10)
-plt.plot(x, train_acc)
-plt.plot(x, test_acc)
-plt.legend(['train', 'test'], loc='upper left')
-plt.title('Accuracy, learning_rate = ' + str(learning_rate), fontsize=14)
-plt.xlabel('Number of epochs', fontsize=11)
-plt.ylabel('Accuracy', fontsize=11)
-plt.show()
+# x = np.arange(10, 10 * (len(train_acc) + 1), 10)
+# plt.plot(x, train_acc)
+# plt.plot(x, test_acc)
+# plt.legend(['train', 'test'], loc='upper left')
+# plt.title('Accuracy, learning_rate = ' + str(learning_rate), fontsize=14)
+# plt.xlabel('Number of epochs', fontsize=11)
+# plt.ylabel('Accuracy', fontsize=11)
+# plt.show()
+
+# torch.save(model, "model8.pt")
+model = torch.load("model8.pt")
+
+# for i in range(10):
+#     print(f'Label {i}: {label_dict[y_train[i]]}')
+
+model.eval()
+with torch.no_grad():
+    for i in range(61, 9771, 50):
+        test_model(model,test[i], y_test[i])
+        # single_input = test[i].unsqueeze(0)  # Add batch dimension
+        # output = model(single_input)  # Now output is from a single batch of size 1
+        # _, predicted = torch.max(output.data, 1)
+        # print(f'Test instance {i}, Predicted: {predicted.item()}, True: {y_test[i]}')
+
+# with torch.no_grad():
+#     for i in range(61,9771,50):
+#         test_model(model,test[i])
+
+# torch.onnx.export(model,torch.from_numpy(X[0]).float().unsqueeze(0),"model.onnx",export_params=True,do_constant_folding=True,input_names = ['input'],output_names = ['output'])
 
 
 # for drawing in unpack_drawings('full_binary_pencil.bin'):
