@@ -35,6 +35,7 @@ export default function GameForm() {
         Cookies.set('quickdrawvs_player_id', result.player_id, {
             expires: inFiveMinutes
         })
+        sessionStorage.setItem("quickdrawvs_is_host", result.is_host)
         window.location.href = `/game.html`
       } else {
         const errorText = await response.text()

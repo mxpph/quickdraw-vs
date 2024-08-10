@@ -3,6 +3,7 @@ import sys
 import logging
 import asyncio
 import redis.asyncio as redis
+import random
 
 from fastapi import (
     FastAPI,
@@ -47,6 +48,7 @@ try:
     logging.info("Redis connection established")
 except Exception as e:
     logging.error(f"Failed to connect to Redis: {e}")
+    sys.exit(1)
 
 def is_valid_uuid(uuid_string):
     try:
@@ -68,6 +70,27 @@ async def pubsub_single(pubsub: redis.client.PubSub, channel: str):
     except redis.PubSubError as e:
         logging.error(f"Exception in pubsub_single: {e}")
 
+async def receive_start_game(websocket: WebSocket, game_id: str, game_data: dict):
+    data = await websocket.receive_json()
+    if data.get("type") != "start_game":
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    logging.debug(f"Got start game message for {game_id}")
+    await redis_client.publish(f"game:{game_id}:start", "start")
+    game_data["status"] = "playing"
+    await redis_client.set(f"game:{game_id}", json.dumps(game_data))
+
+def get_random_word():
+    # TODO
+    words = ["hammer", "basketball", "paperclip", "dog"]
+    return random.choice(words)
+
+async def send_next_round(game_id: str, current_round: int):
+    word = get_random_word()
+    await redis_client.publish(f"game:{game_id}:channel",
+                               json.dumps({"type": "next_round",
+                                           "round": current_round + 1,
+                                           "word": word}))
+
 async def pubsub_loop(websocket: WebSocket, pubsub: redis.client.PubSub):
     try:
         while True:
@@ -79,6 +102,21 @@ async def pubsub_loop(websocket: WebSocket, pubsub: redis.client.PubSub):
 
     except redis.PubSubError as e:
         logging.error(f"Exception in pubsub_loop: {e}")
+
+async def websocket_loop(websocket, game_id, player_id, game_data, player_data):
+    while True:
+        # Cannot use iter_json here as it ignores WebSocketDisconnect.
+        data = await websocket.receive_json()
+        match data.get("type"):
+            case "win":
+                logging.debug(f"Got win message from \'{player_data['name']}\'")
+                round = await redis_client.rpush(f"game:{game_id}:wins", player_id)
+                if (round == game_data["rounds"]):
+                    # TODO Handle game over
+                    pass
+                await send_next_round(game_id, round)
+            case _:
+                raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -108,44 +146,30 @@ async def websocket_endpoint(websocket: WebSocket):
     if player_id not in player_ids:
         logging.debug("ws: Not a player in this game ID")
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    player_data = json.loads(await redis_client.get(f"game:{game_id}:players:{player_id}"))
 
     # All is okay, so accept the connection.
     await websocket.accept()
     logging.info(f"Websocket connection accepted for {player_id}")
 
-    async def websocket_loop():
-        nonlocal game_id, player_id, websocket
-        while True:
-            # Cannot use iter_json here as it ignores WebSocketDisconnect.
-            data = await websocket.receive_json()
-            # TODO: add the necessary messages for gameplay (new word, game end)
-            match data.get("type"):
-                case "test":
-                    await redis_client.publish(f"game:{game_id}:channel",
-                                            json.dumps({"message": f"{player_id} says hi!"}))
-                case _:
-                    raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-
     try:
-        nplayers = await redis_client.llen(f"game:{game_id}:players")
         async with redis_client.pubsub(ignore_subscribe_messages=True) as pubsub:
-            # Wait for the right amount of players before starting.
-            # TODO: Make it so the host starts the game instead.
-            if nplayers < game_data["max_players"]:
-                await pubsub_single(pubsub, f"game:{game_id}:start")
+            # Wait for host to start the game
+            if player_data["is_host"]:
+                await receive_start_game(websocket, game_id, game_data)
             else:
-                logging.debug(f"Found enough players for {game_id}")
-                game_data["status"] = "playing"
-                await redis_client.set(f"game:{game_id}", json.dumps(game_data))
-                await redis_client.publish(f"game:{game_id}:start", "start")
+                await pubsub_single(pubsub, f"game:{game_id}:start")
 
             await pubsub.subscribe(f"game:{game_id}:channel")
+            if player_data["is_host"]:
+                await send_next_round(game_id, 0)
             await asyncio.gather(
-                websocket_loop(),
+                websocket_loop(websocket, game_id, player_id, game_data, player_data),
                 pubsub_loop(websocket, pubsub),
             )
 
     except WebSocketDisconnect:
+        # TODO Handle what happens if the host disconnects
         logging.info(f"Client {player_id} dropped")
         await redis_client.lrem(f"game:{game_id}:players", -1, player_id)
         if await redis_client.llen(f"game:{game_id}:players") == 0:
@@ -171,7 +195,6 @@ async def create_game(data: GameData, request: Request):
             game_id = str(uuid.uuid4())
             game_data = {
                 "status": "waiting",
-                "current_round": 1,
                 "max_players": 2, # TODO: These should be specified in `data` (and validated)
                 "rounds": 5,
             }
@@ -186,7 +209,9 @@ async def create_game(data: GameData, request: Request):
         await redis_client.rpush(f"game:{game_id}:players", player_id)
         await redis_client.set(f"game:{game_id}:players:{player_id}", json.dumps(player_data))
         logging.info(f"Created new player with ID: {player_id}")
-        return {"game_id": game_id, "player_id": player_id}
+        return {"game_id": game_id,
+                "player_id": player_id,
+                "is_host": str(is_host)}
     except Exception as e:
         logging.error(f"create_game: Error creating game: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
