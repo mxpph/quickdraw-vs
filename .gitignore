@@ -30,4 +30,6 @@ frontend/out
 backend/app/out
 
 model/trainingdata
+*.pt
+*.onnx
 *.bin
