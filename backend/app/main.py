@@ -189,7 +189,6 @@ async def create_game(data: GameData, request: Request):
     try:
         game_id = data.game_id
         is_host = False
-        is_host = False
         if (    game_id is None or not is_valid_uuid(game_id)
                 or await redis_client.get(f"game:{game_id}") is None):
             is_host = True
