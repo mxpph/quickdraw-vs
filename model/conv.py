@@ -6,8 +6,6 @@ import math
 import random
 import svgpathtools
 from svgpathtools import svg2paths2
-from os import listdir
-from os.path import isfile, join
 import numpy as np
 from io import StringIO
 from matplotlib import pyplot as plt
@@ -263,27 +261,42 @@ svg_string1 = '''
 # plt.show()
 ################################
 
-label_dict = {}
-values_dict = {}
-items = 0
 
-mypath = os.path.join(os.getcwd(), "model", "trainingdata")
-arr = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-items = len(arr)
-print(f"Items: {items}")
 
-for i,v in enumerate(arr):
-    label_dict[i] = v
-    values_dict[v] = []
+label_dict = {
+    0: "basketball",
+    1: "hammer",
+    2: "paperclip",
+    3: "pencil",
+    4: "broom",
+    5: "camera",
+    6: "dog",
+    7: "dresser",
+    8: "hat",
+    9: "hexagon",
+}
+
+values_dict = {
+    "basketball": [],
+    "hammer": [],
+    "paperclip": [],
+    "pencil": [],
+    "broom": [],
+    "camera": [],
+    "dog": [],
+    "dresser": [],
+    "hat": [],
+    "hexagon": [],
+}
 
 for item in values_dict.keys():
     i = 0
-    for drawing in unpack_drawings(item):
+    for drawing in unpack_drawings('full_binary_'+str(item)+'.bin'):
         simplifiedVector = drawing["image"]
         raster = vector_to_raster([simplifiedVector])[0]
         values_dict[item].append(raster)
         i += 1
-        if i > 6999:#9999:
+        if i > 1999:#9999:
             break
 
 
@@ -327,21 +340,23 @@ def view_images_grid(X, y):
 
 view_images_grid(X,y)
 
-class SimpleMLP(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size):
-        super(SimpleMLP, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_sizes[0])
-        self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
-        self.fc3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
-        self.fc4 = nn.Linear(hidden_sizes[2], hidden_sizes[3])
-        self.fc5 = nn.Linear(hidden_sizes[3], output_size)
-        
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super(SimpleCNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1) # Input channels=1, Output channels=32
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1) # Input channels=32, Output channels=64
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1) # Input channels=64, Output channels=128
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0) # Pooling layer
+        self.fc1 = nn.Linear(128 * 3 * 3, 512) # Adjust input size based on your image size and layers
+        self.fc2 = nn.Linear(512, 10) # Output size = number of classes
+
     def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        x = x.view(-1, 128 * 3 * 3) # Flatten the tensor
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
-        x = self.fc5(x)
+        x = self.fc2(x)
         return x
 
 # Define training and evaluation functions
@@ -359,18 +374,13 @@ def train_model(model, X_train, y_train, epochs=10, learning_rate=0.01):
 
         print(f'Epoch {epoch}, Loss: {loss.item():.4f}')
 
-def evaluate_model(model, X_train, y_train, X_test, y_test):
+def evaluate_model(model, X_test, y_test):
     model.eval()
     with torch.no_grad():
-        outputs1 = model(torch.from_numpy(X_train).float())
-        _, predicted1 = torch.max(outputs1, 1)
-        accuracy = (predicted1.numpy() == y_train).mean()
-        print(f'Train Accuracy: {accuracy:.4f}')
-
         outputs = model(torch.from_numpy(X_test).float())
         _, predicted = torch.max(outputs, 1)
         accuracy = (predicted.numpy() == y_test).mean()
-        print(f'Test Accuracy: {accuracy:.4f}')
+        print(f'Accuracy: {accuracy:.4f}')
     return accuracy
 
 def view_img(raster):
@@ -379,50 +389,39 @@ def view_img(raster):
     plt.show()
 
 def get_pred(model, raster):
-    raster_tensor = torch.tensor(raster, dtype=torch.float).unsqueeze(0)
     model.eval()
+    raster = torch.from_numpy(raster).float().unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions
     with torch.no_grad():
-        outputs = model(raster_tensor)
+        outputs = model(raster)
         _, predicted = torch.max(outputs, 1)
-    
     predicted_label = predicted.item()
     return label_dict[predicted_label]
 
+# Preprocess the data
+X = np.array(X)
+y = np.array(y)
+
+# Split the data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 
-# Set up and train the model
-input_size = 784
-hidden_sizes = [600, 400, 160, 80]
-output_size = items
-model = SimpleMLP(input_size, hidden_sizes, output_size)
+# Reshape X_train and X_test for CNN input (batch_size, channels, height, width)
+X_train = X_train.reshape(-1, 1, 28, 28)
+X_test = X_test.reshape(-1, 1, 28, 28)
 
-train_model(model, X_train, y_train, epochs=150, learning_rate=0.01)
+# Initialize and train the model
+model = SimpleCNN()
+train_model(model, X_train, y_train, epochs=10, learning_rate=0.01)
 
-torch.save(model, "model4_0_huge.pt")
-torch.onnx.export(model,torch.tensor(X_train[0], dtype=torch.float).unsqueeze(0),"model4_0_huge.onnx",export_params=True,do_constant_folding=True,input_names = ['input'],output_names = ['output'])
-
-# model = torch.load("model3_1_large.pt")
+# Save and reload the model
+torch.save(model, "model_4_cnn.pt")
+# model = torch.load("model_cnn.pt")
 
 # Evaluate the model
-evaluate_model(model, X_train, y_train, X_test, y_test)
+evaluate_model(model, X_test, y_test)
 
-model.eval()
-
+# Test the model with some samples
 with torch.no_grad():
-    evaluate_model(model, X_train, y_train, X_test, y_test)
-
-    rawStrokes = svg_to_strokes(svg_string1)
-    reformattedStrokes = svgStokesReformat(rawStrokes)
-    simplifiedVector = simplifyStrokes(reformattedStrokes)
-    raster = vector_to_raster([simplifiedVector])[0]
-    print(f"PREDICTED DRAWING: {get_pred(model,raster)}")
-    view_img(raster)
-
+    evaluate_model(model, X_test, y_test)
     for i in range(61, 9771, 299):
-        print(f"Actual: {label_dict[y_train[i]]}, Pred: {get_pred(model,X_train[i])}")
+        print(f"Actual: {label_dict[y_train[i]]}, Pred: {get_pred(model, X_train[i])}")
         view_img(X_train[i])
-        # test_model(model,img, y_train[i])
-
-# with torch.no_grad():
-#     for i in range(61,9771,50):
-#         test_model(model,test[i])
