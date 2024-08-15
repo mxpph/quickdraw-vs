@@ -129,7 +129,6 @@ export default function GameForm() {
           type="submit"
           className="btn btn-primary"
         >
-          {/* TODO: Separate join/create forms */}
           Create Game
         </button>
       </form>
@@ -169,7 +168,6 @@ export default function GameForm() {
           type="submit"
           className="btn btn-primary"
         >
-          {/* TODO: Separate join/create forms */}
           Join Game
         </button>
       </form>
