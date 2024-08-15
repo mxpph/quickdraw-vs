@@ -69,7 +69,7 @@ export default function GameForm() {
   }
 
   return (
-    <div className="w-full grid grid-cols-2 grid-rows-1 gap-4">
+    <div className="grid grid-cols-2 grid-rows-1 gap-4">
       <form
         id="createForm"
         noValidate={true}

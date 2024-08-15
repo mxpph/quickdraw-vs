@@ -213,7 +213,7 @@ async def join_game(data: JoinGameData):
                 or await redis_client.get(f"game:{game_id}") is None):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Invalid game ID")
-        if check_too_many_players(game_id):
+        if await check_too_many_players(game_id):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="This game is full")
         player_id = str(uuid.uuid4())
@@ -239,18 +239,18 @@ async def create_game(data: CreateGameData):
                             detail="Internal database error")
     try:
         logging.debug(f"create-game data: {data}")
-        if (    data.max_players < MIN_PLAYERS
-                or data.max_players > MAX_PLAYERS
-                or data.rounds < MIN_ROUNDS
-                or data.rounds > MAX_ROUNDS):
+        max_players = int(data.max_players)
+        rounds = int(data.rounds)
+        if (max_players < MIN_PLAYERS or max_players > MAX_PLAYERS
+                or rounds < MIN_ROUNDS or rounds > MAX_ROUNDS):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Invalid rounds or max players")
 
         game_id = str(uuid.uuid4())
         game_data = {
             "status": "waiting",
-            "max_players": data.max_players,
-            "rounds": data.rounds,
+            "max_players": max_players,
+            "rounds": rounds,
         }
         await redis_client.set(f"game:{game_id}", json.dumps(game_data))
         logging.info(f"Created new game with ID: {game_id}")
