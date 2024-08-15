@@ -198,7 +198,6 @@ const DrawCanvas: React.FC = () => {
     // Log SVG content to the console
     console.log('SVG Content:', svgContent);
   };
-  
 
   return (
     <div>
@@ -223,8 +222,10 @@ const DrawCanvas: React.FC = () => {
           ))}
         </Layer>
       </Stage>
-      <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleRasterize}>Rasterize Drawing</button>
-      <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleExportToSVG}>Export to SVG</button>
+      <div className="flex justify-center items-center align-middle">
+        <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleRasterize}>Rasterize Drawing</button>
+        <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleExportToSVG}>Export to SVG</button>
+      </div>
     </div>
   );
 };
