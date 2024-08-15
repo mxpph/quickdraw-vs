@@ -25,6 +25,8 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 class GameData(BaseModel):
     game_id: str | None = None
     player_name: str
+    max_players: str
+    rounds: str
 
 app = FastAPI()
 
@@ -180,6 +182,11 @@ async def websocket_endpoint(websocket: WebSocket):
         logging.error(f"Pubsub exception in websocket_endpoint: {e}")
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
 
+MIN_PLAYERS = 2
+MAX_PLAYERS = 6
+MIN_ROUNDS = 2
+MAX_ROUNDS = 10
+
 @app.post("/create-game")
 async def create_game(data: GameData, request: Request):
     if not redis_client:
@@ -187,7 +194,14 @@ async def create_game(data: GameData, request: Request):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Internal database error")
     try:
-        game_id = data.game_id
+        logging.debug(f"create-game data: {data}")
+        if (    data.max_players < MIN_PLAYERS
+                or data.max_players > MAX_PLAYERS
+                or data.rounds < MIN_ROUNDS
+                or data.rounds > MAX_ROUNDS):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail="Invalid rounds or max players")
+
         is_host = False
         if (    game_id is None or not is_valid_uuid(game_id)
                 or await redis_client.get(f"game:{game_id}") is None):
@@ -195,8 +209,8 @@ async def create_game(data: GameData, request: Request):
             game_id = str(uuid.uuid4())
             game_data = {
                 "status": "waiting",
-                "max_players": 2, # TODO: These should be specified in `data` (and validated)
-                "rounds": 5,
+                "max_players": data.max_players,
+                "rounds": data.rounds,
             }
             await redis_client.set(f"game:{game_id}", json.dumps(game_data))
             logging.info(f"Created new game with ID: {game_id}")
@@ -206,12 +220,16 @@ async def create_game(data: GameData, request: Request):
             "name": data.player_name,
             "is_host": is_host,
         }
+        # TODO validate that adding a new player doesn't exceed the max players
+        # should probably separate join-game and create-game then
         await redis_client.rpush(f"game:{game_id}:players", player_id)
         await redis_client.set(f"game:{game_id}:players:{player_id}", json.dumps(player_data))
         logging.info(f"Created new player with ID: {player_id}")
         return {"game_id": game_id,
                 "player_id": player_id,
                 "is_host": str(is_host)}
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"create_game: Error creating game: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

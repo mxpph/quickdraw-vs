@@ -6,6 +6,8 @@ export default function GameForm() {
   const [formData, setFormData] = useState({
     game_id: '',
     player_name: '',
+    max_players: '',
+    rounds: '',
   })
 
   const handleChange = (e: any) => {
@@ -47,33 +49,81 @@ export default function GameForm() {
   }
   return (
     <form
+      id="gameform"
       noValidate={true}
       onSubmit={handleSubmit}
       className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
     >
-      <p>Game ID</p>
-      <input
-        type="text"
-        className="rounded-md p-2 bg-neutral-200 shadow-md"
-        name="game_id"
-        placeholder="Blank for new game"
-        onChange={handleChange}
-        required
-      />
-      <p>Player Name</p>
-      <input
-        type="text"
-        className="rounded-md p-2 bg-neutral-200 shadow-md"
-        name="player_name"
-        onChange={handleChange}
-        required
-      />
+      <label className="form-control w-full max-w-xs">
+        <div className="label">
+          <span className="label-text">Game ID</span>
+          <span className="label-text-alt">(blank for new game)</span>
+        </div>
+        <input
+          type="text"
+          className="input input-bordered input-primary w-full max-w-xs"
+          name="game_id"
+          maxLength={36}
+          onChange={handleChange}
+          required
+        />
+      </label>
+      <label className="form-control w-full max-w-xs">
+        <div className="label">
+          <span className="label-text">Player Name</span>
+        </div>
+        <input
+          type="text"
+          className="input input-bordered input-primary w-full max-w-xs"
+          name="player_name"
+          maxLength={16}
+          onChange={handleChange}
+          required
+        />
+      </label>
+      <div className="w-full grid grid-cols-2 grid-rows-1 gap-2">
+        <select
+          className="select select-primary"
+          name="max_players"
+          onChange={handleChange}
+          form="gameform"
+        >
+          <option disabled selected>
+            Max players
+          </option>
+          <option>2</option>
+          <option>3</option>
+          <option>4</option>
+          <option>5</option>
+          <option>6</option>
+        </select>
+        <select
+          className="select select-primary"
+          name="rounds"
+          onChange={handleChange}
+          form="gameform"
+        >
+          <option disabled selected>
+            Rounds
+          </option>
+          <option>2</option>
+          <option>3</option>
+          <option>4</option>
+          <option>5</option>
+          <option>6</option>
+          <option>7</option>
+          <option>8</option>
+          <option>9</option>
+          <option>10</option>
+        </select>
+      </div>
       <button
         type="submit"
-        className="bg-primary mt-4 font-semibold text-white rounded-lg p-2"
+        className="btn btn-primary"
       >
+        {/* TODO: Separate join/create forms */}
         Join Game
       </button>
     </form>
-  )
+  );
 }
