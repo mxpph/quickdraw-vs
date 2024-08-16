@@ -138,7 +138,7 @@ const DrawCanvas: React.FC = () => {
 
   async function ONNX(input: any) {
     try {
-      const session = await ort.InferenceSession.create("model3_3_large.onnx");
+      const session = await ort.InferenceSession.create("model3_4_large.onnx");
   
       const tensor = new ort.Tensor('float32', new Float32Array(input), [1, 784]);
 
