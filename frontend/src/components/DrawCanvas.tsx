@@ -1,14 +1,22 @@
 import React, { useRef, useState } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
+import * as ort from 'onnxruntime-web';
+
 
 interface Point {
   x: number;
   y: number;
 }
 
+let lastDrawn = Date.now()
 const DrawCanvas: React.FC = () => {
+  const [prediction, setPrediction] = useState('?');
   const [lines, setLines] = useState<Point[][]>([]);
   const isDrawing = useRef(false);
+
+  const predDebounce = 450
+
+  const modelCategories = ["airplane","angel","ant","anvil","apple","banana","basketball","broom","camera","dog", "dresser","hammer","hat","hexagon","paperclip","pencil"]
 
   const handleMouseDown = (e: any) => {
     isDrawing.current = true;
@@ -23,6 +31,14 @@ const DrawCanvas: React.FC = () => {
     const point = stage.getPointerPosition();
     const lastLine = lines[lines.length - 1].concat([point]);
     setLines(lines.slice(0, -1).concat([lastLine]));
+
+    console.log((Date.now() - lastDrawn))
+    if ((Date.now() - lastDrawn) > predDebounce) {
+      console.log('hey :)')
+      lastDrawn = Date.now()
+      handleEvaluate()
+    }
+
   };
 
   const handleMouseUp = () => {
@@ -109,79 +125,40 @@ const DrawCanvas: React.FC = () => {
     return rasterImage;
   };
 
-  // const rasterizeStrokes = (normalizedStrokes: [number[], number[]][], size: number = 28): number[] => {
-  //   const originalSize = 256;
-  //   const padding = 16; // Adjust if needed
-  //   const lineWidth = 16; // Adjust based on your needs
+  function softmax(arr: Float32Array): Float32Array {
+    const max = Math.max(...arr);
+    const exps = arr.map((x) => Math.exp(x - max));  // Subtract max for numerical stability
+    const sum = exps.reduce((a, b) => a + b, 0);
+    return exps.map((x) => x / sum);
+  }
 
-  //   const totalPadding = padding * 2 + lineWidth;
-  //   const scale = size / (originalSize + totalPadding);
+  function argMax(arr: Float32Array): number {
+    return arr.indexOf(Math.max(...arr));
+  }
 
-  //   const canvas = document.createElement('canvas');
-  //   canvas.width = size;
-  //   canvas.height = size;
-  //   const ctx = canvas.getContext('2d');
+  async function ONNX(input: any) {
+    try {
+      const session = await ort.InferenceSession.create("model3_3_large.onnx");
+  
+      const tensor = new ort.Tensor('float32', new Float32Array(input), [1, 784]);
 
-  //   if (!ctx) {
-  //     throw new Error('Could not get 2D context from canvas');
-  //   }
-
-  //   // Clear background
-  //   ctx.fillStyle = 'white';
-  //   ctx.fillRect(0, 0, size, size);
-
-  //   // Set up stroke style
-  //   ctx.strokeStyle = 'black';
-  //   ctx.lineWidth = lineWidth * scale;
-  //   ctx.lineCap = 'round';
-  //   ctx.lineJoin = 'round';
-
-  //   ctx.translate(totalPadding / 2 * scale, totalPadding / 2 * scale);
-
-  //   // Draw strokes
-  //   for (const [xCoords, yCoords] of normalizedStrokes) {
-  //     ctx.beginPath();
-  //     ctx.moveTo(xCoords[0] * scale, yCoords[0] * scale);
-  //     for (let i = 1; i < xCoords.length; i++) {
-  //       ctx.lineTo(xCoords[i] * scale, yCoords[i] * scale);
-  //     }
-  //     ctx.stroke();
-  //   }
-
-  //   // Get image data
-  //   const imageData = ctx.getImageData(0, 0, size, size);
-    
-  //   // Convert to 1D array of grayscale values (0-255)
-  //   const rasterImage = new Array(size * size);
-  //   for (let i = 0; i < imageData.data.length; i += 4) {
-  //     rasterImage[i / 4] = 255 - imageData.data[i]; // Invert colors (black on white background)
-  //   }
-
-  //   return rasterImage;
-  // };
+      const inputMap = { 'input': tensor };
+  
+      const outputMap = await session.run(inputMap);
+  
+      const output = outputMap['output'].data as Float32Array;
+  
+      console.log(output)
+      return output;
+    } catch (error) {
+      console.error("Error running ONNX model:", error);
+    }
+  }
 
   const handleRasterize = () => {
     const normalizedStrokes = normalizeStrokes(lines);
     const rasterArray = rasterizeStrokes(normalizedStrokes);
     console.log('Rasterized array:', rasterArray);
-    
-    // Visualize the rasterized image (for debugging)
-    const canvas = document.createElement('canvas');
-    canvas.width = 28;
-    canvas.height = 28;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const imageData = ctx.createImageData(28, 28);
-      for (let i = 0; i < rasterArray.length; i++) {
-        const value = rasterArray[i];
-        imageData.data[i * 4] = value;
-        imageData.data[i * 4 + 1] = value;
-        imageData.data[i * 4 + 2] = value;
-        imageData.data[i * 4 + 3] = 255;
-      }
-      ctx.putImageData(imageData, 0, 0);
-      document.body.appendChild(canvas);
-    }
   };
 
   const handleExportToSVG = () => {
@@ -199,8 +176,23 @@ const DrawCanvas: React.FC = () => {
     console.log('SVG Content:', svgContent);
   };
 
+  const handleEvaluate = () => {
+    const normalizedStrokes = normalizeStrokes(lines);
+    const rasterArray = rasterizeStrokes(normalizedStrokes);
+
+    ONNX(rasterArray).then((res) => {
+      console.log(res)
+      res = res as Float32Array
+      setPrediction(modelCategories[argMax(res)])
+    })
+  };
+
+
   return (
     <div>
+      <div className="grid place-items-center">
+        <p className='text-xl font-semibold'>PREDICTION: {prediction}</p>
+      </div>
       <Stage
         width={window.innerWidth * 0.9}
         height={window.innerHeight * 0.9}
@@ -225,6 +217,7 @@ const DrawCanvas: React.FC = () => {
       <div className="flex justify-center items-center align-middle">
         <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleRasterize}>Rasterize Drawing</button>
         <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleExportToSVG}>Export to SVG</button>
+        <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleEvaluate}>Evaluate drawing</button>
       </div>
     </div>
   );
