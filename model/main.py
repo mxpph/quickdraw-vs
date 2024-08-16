@@ -298,15 +298,18 @@ for i,v in enumerate(arr):
     label_dict[i] = v
     values_dict[v] = []
 
-for item in values_dict.keys():
-    i = 0
-    for drawing in unpack_drawings(item):
-        simplifiedVector = drawing["image"]
-        raster = vector_to_raster([simplifiedVector])[0]
-        values_dict[item].append(raster)
-        i += 1
-        if i > 34999:
-            break
+print("kaka",label_dict)
+
+# for item in values_dict.keys():
+#     i = 0
+#     for drawing in unpack_drawings(item):
+#         simplifiedVector = drawing["image"]
+#         raster = vector_to_raster([simplifiedVector])[0]
+#         values_dict[item].append(raster)
+#         i += 1
+#         if i > 34999:
+#             break
+
 
 X = []
 y = []

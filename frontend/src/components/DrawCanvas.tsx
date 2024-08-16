@@ -16,7 +16,7 @@ const DrawCanvas: React.FC = () => {
 
   const predDebounce = 450
 
-  const modelCategories = ["airplane","angel","ant","anvil","apple","banana","basketball","broom","camera","dog", "dresser","hammer","hat","hexagon","paperclip","pencil"]
+  const modelCategories = ['apple', 'anvil', 'dresser', 'broom', 'hat', 'camera', 'dog', 'basketball', 'pencil', 'hammer', 'hexagon', 'banana', 'angel', 'airplane', 'ant', 'paper clip']
 
   const handleMouseDown = (e: any) => {
     isDrawing.current = true;
