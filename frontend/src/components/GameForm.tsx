@@ -14,6 +14,8 @@ export default function GameForm() {
     player_name: '',
   })
 
+  const [error, setError] = useState<string>("")
+
   const handleCreateFormChange = (e: any) => {
     setCreateFormData({
       ...createFormData,
@@ -60,117 +62,140 @@ export default function GameForm() {
         sessionStorage.setItem("quickdrawvs_is_host", result.is_host)
         window.location.href = `/game.html`
       } else {
-        const errorText = await response.text()
-        throw new Error(`Network response was not ok: ${response.statusText}, ${errorText}`)
+        const error = await response.json()
+        throw new Error(error.detail)
       }
-    } catch (error) {
-      console.error("Error:", error)
+    } catch (error: any) {
+      setError(error.message)
     }
   }
 
   return (
-    <div className="grid grid-cols-2 grid-rows-1 gap-4">
-      <form
-        id="createForm"
-        noValidate={true}
-        onSubmit={(e: any) => handleSubmit(e, "create")}
-        className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
-      >
-        <label className="form-control w-full max-w-xs">
-          <div className="label">
-            <span className="label-text">Player Name</span>
+    <div className="grid gap-4">
+      {error && (
+        <div role="alert" className="alert alert-error">
+          <span>
+            Error: {error}
+          </span>
+          <div className="w-full flex flex-row justify-end">
+            <button className="btn btn-sm btn-circle btn-outline" onClick={() => {setError("")}}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <input
-            type="text"
-            className="input input-bordered input-primary w-full max-w-xs"
-            name="player_name"
-            maxLength={16}
-            onChange={handleCreateFormChange}
-            required
-          />
-        </label>
-        <div className="w-full grid grid-cols-2 grid-rows-1 gap-2">
-          <select
-            className="select select-primary"
-            name="max_players"
-            onChange={handleCreateFormChange}
-            form="createForm"
-          >
-            <option disabled selected>
-              Max players
-            </option>
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-            <option>5</option>
-            <option>6</option>
-          </select>
-          <select
-            className="select select-primary"
-            name="rounds"
-            onChange={handleCreateFormChange}
-            form="createForm"
-          >
-            <option disabled selected>
-              Rounds
-            </option>
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-            <option>5</option>
-            <option>6</option>
-            <option>7</option>
-            <option>8</option>
-            <option>9</option>
-            <option>10</option>
-          </select>
         </div>
-        <button
-          type="submit"
-          className="btn btn-primary"
+      )}
+      <div className="flex flex-row flex-wrap gap-4">
+        <form
+          id="createForm"
+          onSubmit={(e: any) => handleSubmit(e, "create")}
+          className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
         >
-          Create Game
-        </button>
-      </form>
-      <form
-        id="joinForm"
-        noValidate={true}
-        onSubmit={(e: any) => handleSubmit(e, "join")}
-        className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
-      >
-      <label className="form-control w-full max-w-xs">
-        <div className="label">
-          <span className="label-text">Game ID</span>
-        </div>
-        <input
-          type="text"
-          className="input input-bordered input-primary w-full max-w-xs"
-          name="game_id"
-          maxLength={36}
-          onChange={handleJoinFormChange}
-          required
-        />
-      </label>
+          <label className="form-control w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Player Name</span>
+            </div>
+            <input
+              type="text"
+              className="input input-bordered input-primary w-full max-w-xs"
+              name="player_name"
+              maxLength={16}
+              onChange={handleCreateFormChange}
+              required
+            />
+          </label>
+          <div className="w-full grid grid-cols-2 grid-rows-1 gap-2">
+            <select
+              className="select select-primary"
+              name="max_players"
+              onChange={handleCreateFormChange}
+              form="createForm"
+            >
+              <option disabled selected>
+                Max players
+              </option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6</option>
+            </select>
+            <select
+              className="select select-primary"
+              name="rounds"
+              onChange={handleCreateFormChange}
+              form="createForm"
+            >
+              <option disabled selected>
+                Rounds
+              </option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="btn btn-primary"
+          >
+            Create Game
+          </button>
+        </form>
+        <form
+          id="joinForm"
+          onSubmit={(e: any) => handleSubmit(e, "join")}
+          className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
+        >
         <label className="form-control w-full max-w-xs">
           <div className="label">
-            <span className="label-text">Player Name</span>
+            <span className="label-text">Game ID</span>
           </div>
           <input
             type="text"
             className="input input-bordered input-primary w-full max-w-xs"
-            name="player_name"
-            maxLength={16}
+            name="game_id"
+            maxLength={36}
             onChange={handleJoinFormChange}
             required
           />
         </label>
-        <button
-          type="submit"
-          className="btn btn-primary"
-        >
-          Join Game
-        </button>
-      </form>
+          <label className="form-control w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Player Name</span>
+            </div>
+            <input
+              type="text"
+              className="input input-bordered input-primary w-full max-w-xs"
+              name="player_name"
+              maxLength={16}
+              onChange={handleJoinFormChange}
+              required
+            />
+          </label>
+          <button
+            type="submit"
+            className="btn btn-primary"
+          >
+            Join Game
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -267,7 +267,8 @@ async def create_game(data: CreateGameData):
         raise
     except Exception as e:
         logging.error(f"create_game: Error creating game: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Internal server error")
 
 # These have to come after or the endpoints are overriden and incorrectly
 # routed.
