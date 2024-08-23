@@ -1,22 +1,38 @@
-import React, { useRef, useState } from 'react';
-import { Stage, Layer, Line } from 'react-konva';
-import * as ort from 'onnxruntime-web';
-
+import React, { useRef, useState } from "react";
+import { Stage, Layer, Line } from "react-konva";
+import * as ort from "onnxruntime-web";
 
 interface Point {
   x: number;
   y: number;
 }
 
-let lastDrawn = Date.now()
+let lastDrawn = Date.now();
 const DrawCanvas: React.FC = () => {
-  const [prediction, setPrediction] = useState('?');
+  const [prediction, setPrediction] = useState("?");
   const [lines, setLines] = useState<Point[][]>([]);
   const isDrawing = useRef(false);
 
-  const predDebounce = 450
+  const predDebounce = 450;
 
-  const modelCategories = ['apple', 'anvil', 'dresser', 'broom', 'hat', 'camera', 'dog', 'basketball', 'pencil', 'hammer', 'hexagon', 'banana', 'angel', 'airplane', 'ant', 'paper clip']
+  const modelCategories = [
+    "apple",
+    "anvil",
+    "dresser",
+    "broom",
+    "hat",
+    "camera",
+    "dog",
+    "basketball",
+    "pencil",
+    "hammer",
+    "hexagon",
+    "banana",
+    "angel",
+    "airplane",
+    "ant",
+    "paper clip",
+  ];
 
   const handleMouseDown = (e: any) => {
     isDrawing.current = true;
@@ -32,13 +48,12 @@ const DrawCanvas: React.FC = () => {
     const lastLine = lines[lines.length - 1].concat([point]);
     setLines(lines.slice(0, -1).concat([lastLine]));
 
-    console.log((Date.now() - lastDrawn))
-    if ((Date.now() - lastDrawn) > predDebounce) {
-      console.log('hey :)')
-      lastDrawn = Date.now()
-      handleEvaluate()
+    console.log(Date.now() - lastDrawn);
+    if (Date.now() - lastDrawn > predDebounce) {
+      console.log("hey :)");
+      lastDrawn = Date.now();
+      handleEvaluate();
     }
-
   };
 
   const handleMouseUp = () => {
@@ -47,62 +62,76 @@ const DrawCanvas: React.FC = () => {
 
   const normalizeStrokes = (strokes: Point[][]): [number[], number[]][] => {
     const allPoints = strokes.flat();
-    const minX = Math.min(...allPoints.map(p => p.x));
-    const minY = Math.min(...allPoints.map(p => p.y));
-    const maxX = Math.max(...allPoints.map(p => p.x));
-    const maxY = Math.max(...allPoints.map(p => p.y));
-  
+    const minX = Math.min(...allPoints.map((p) => p.x));
+    const minY = Math.min(...allPoints.map((p) => p.y));
+    const maxX = Math.max(...allPoints.map((p) => p.x));
+    const maxY = Math.max(...allPoints.map((p) => p.y));
+
     const width = maxX - minX;
     const height = maxY - minY;
     const maxDim = Math.max(width, height);
     const scale = 255 / maxDim;
-  
-    return strokes.map(stroke => {
-      const xCoords = stroke.map(p => Math.round((p.x - minX) * scale));
-      const yCoords = stroke.map(p => Math.round((p.y - minY) * scale));
+
+    return strokes.map((stroke) => {
+      const xCoords = stroke.map((p) => Math.round((p.x - minX) * scale));
+      const yCoords = stroke.map((p) => Math.round((p.y - minY) * scale));
       return [xCoords, yCoords];
     });
   };
 
-  const rasterizeStrokes = (normalizedStrokes: [number[], number[]][], side: number = 28, line_diameter: number = 16, padding: number = 16): number[] => {
+  const rasterizeStrokes = (
+    normalizedStrokes: [number[], number[]][],
+    side: number = 28,
+    line_diameter: number = 16,
+    padding: number = 16
+  ): number[] => {
     const original_side = 256;
     const bg_color = [0, 0, 0];
     const fg_color = [1, 1, 1];
-  
-    const canvas = document.createElement('canvas');
+
+    const canvas = document.createElement("canvas");
     canvas.width = side;
     canvas.height = side;
-    const ctx = canvas.getContext('2d');
-  
+    const ctx = canvas.getContext("2d");
+
     if (!ctx) {
-      throw new Error('Could not get 2D context from canvas');
+      throw new Error("Could not get 2D context from canvas");
     }
-  
+
     // Set up context to match Cairo settings
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.lineWidth = line_diameter;
-  
+
     // Scale and translate
     const total_padding = padding * 2 + line_diameter;
     const new_scale = side / (original_side + total_padding);
     ctx.scale(new_scale, new_scale);
     ctx.translate(total_padding / 2, total_padding / 2);
-  
+
     // Clear background
-    ctx.fillStyle = `rgb(${bg_color[0] * 255},${bg_color[1] * 255},${bg_color[2] * 255})`;
+    ctx.fillStyle = `rgb(${bg_color[0] * 255},${bg_color[1] * 255},${
+      bg_color[2] * 255
+    })`;
     ctx.fillRect(0, 0, side / new_scale, side / new_scale);
-  
+
     // Calculate bounding box and offset
-    const allPoints = normalizedStrokes.flatMap(stroke => stroke[0].map((x, i) => [x, stroke[1][i]]));
+    const allPoints = normalizedStrokes.flatMap((stroke) =>
+      stroke[0].map((x, i) => [x, stroke[1][i]])
+    );
     const bbox = [
-      Math.max(...allPoints.map(p => p[0])),
-      Math.max(...allPoints.map(p => p[1]))
+      Math.max(...allPoints.map((p) => p[0])),
+      Math.max(...allPoints.map((p) => p[1])),
     ];
-    const offset = [(original_side - bbox[0]) / 2, (original_side - bbox[1]) / 2];
-  
+    const offset = [
+      (original_side - bbox[0]) / 2,
+      (original_side - bbox[1]) / 2,
+    ];
+
     // Draw strokes
-    ctx.strokeStyle = `rgb(${fg_color[0] * 255},${fg_color[1] * 255},${fg_color[2] * 255})`;
+    ctx.strokeStyle = `rgb(${fg_color[0] * 255},${fg_color[1] * 255},${
+      fg_color[2] * 255
+    })`;
     for (let i = 0; i < normalizedStrokes.length; i++) {
       const [xv, yv] = normalizedStrokes[i];
       ctx.beginPath();
@@ -112,22 +141,22 @@ const DrawCanvas: React.FC = () => {
       }
       ctx.stroke();
     }
-  
+
     // Get image data
     const imageData = ctx.getImageData(0, 0, side, side);
-    
+
     // Convert to 1D array of grayscale values (0-255)
     const rasterImage = new Array(side * side);
     for (let i = 0; i < imageData.data.length; i += 4) {
       rasterImage[i / 4] = imageData.data[i]; // Invert colors (black on white background)
     }
-  
+
     return rasterImage;
   };
 
   function softmax(arr: Float32Array): Float32Array {
     const max = Math.max(...arr);
-    const exps = arr.map((x) => Math.exp(x - max));  // Subtract max for numerical stability
+    const exps = arr.map((x) => Math.exp(x - max)); // Subtract max for numerical stability
     const sum = exps.reduce((a, b) => a + b, 0);
     return exps.map((x) => x / sum);
   }
@@ -139,16 +168,20 @@ const DrawCanvas: React.FC = () => {
   async function ONNX(input: any) {
     try {
       const session = await ort.InferenceSession.create("model3_4_large.onnx");
-  
-      const tensor = new ort.Tensor('float32', new Float32Array(input), [1, 784]);
 
-      const inputMap = { 'input': tensor };
-  
+      const tensor = new ort.Tensor(
+        "float32",
+        new Float32Array(input),
+        [1, 784]
+      );
+
+      const inputMap = { input: tensor };
+
       const outputMap = await session.run(inputMap);
-  
-      const output = outputMap['output'].data as Float32Array;
-  
-      console.log(output)
+
+      const output = outputMap["output"].data as Float32Array;
+
+      console.log(output);
       return output;
     } catch (error) {
       console.error("Error running ONNX model:", error);
@@ -158,22 +191,26 @@ const DrawCanvas: React.FC = () => {
   const handleRasterize = () => {
     const normalizedStrokes = normalizeStrokes(lines);
     const rasterArray = rasterizeStrokes(normalizedStrokes);
-    console.log('Rasterized array:', rasterArray);
+    console.log("Rasterized array:", rasterArray);
   };
 
   const handleExportToSVG = () => {
-    const svgHeader = `<svg width="${window.innerWidth * 0.9}" height="${window.innerHeight * 0.9}" xmlns="http://www.w3.org/2000/svg">`;
-    const svgFooter = '</svg>';
-  
-    const svgPaths = lines.map((line, index) => {
-      const pathData = line.map(p => `${p.x},${p.y}`).join(' ');
-      return `<path d="M ${pathData}" stroke="black" stroke-width="7" fill="none" />`;
-    }).join('');
-  
+    const svgHeader = `<svg width="${window.innerWidth * 0.9}" height="${
+      window.innerHeight * 0.9
+    }" xmlns="http://www.w3.org/2000/svg">`;
+    const svgFooter = "</svg>";
+
+    const svgPaths = lines
+      .map((line, index) => {
+        const pathData = line.map((p) => `${p.x},${p.y}`).join(" ");
+        return `<path d="M ${pathData}" stroke="black" stroke-width="7" fill="none" />`;
+      })
+      .join("");
+
     const svgContent = svgHeader + svgPaths + svgFooter;
-  
+
     // Log SVG content to the console
-    console.log('SVG Content:', svgContent);
+    console.log("SVG Content:", svgContent);
   };
 
   const handleEvaluate = () => {
@@ -181,17 +218,16 @@ const DrawCanvas: React.FC = () => {
     const rasterArray = rasterizeStrokes(normalizedStrokes);
 
     ONNX(rasterArray).then((res) => {
-      console.log(res)
-      res = res as Float32Array
-      setPrediction(modelCategories[argMax(res)])
-    })
+      console.log(res);
+      res = res as Float32Array;
+      setPrediction(modelCategories[argMax(res)]);
+    });
   };
-
 
   return (
     <div>
       <div className="grid place-items-center">
-        <p className='text-xl font-semibold'>PREDICTION: {prediction}</p>
+        <p className="text-xl font-semibold">PREDICTION: {prediction}</p>
       </div>
       <Stage
         width={window.innerWidth * 0.9}
@@ -215,9 +251,24 @@ const DrawCanvas: React.FC = () => {
         </Layer>
       </Stage>
       <div className="flex justify-center items-center align-middle">
-        <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleRasterize}>Rasterize Drawing</button>
-        <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleExportToSVG}>Export to SVG</button>
-        <button className='my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1' onClick={handleEvaluate}>Evaluate drawing</button>
+        <button
+          className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1"
+          onClick={handleRasterize}
+        >
+          Rasterize Drawing
+        </button>
+        <button
+          className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1"
+          onClick={handleExportToSVG}
+        >
+          Export to SVG
+        </button>
+        <button
+          className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1"
+          onClick={handleEvaluate}
+        >
+          Evaluate drawing
+        </button>
       </div>
     </div>
   );
