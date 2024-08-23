@@ -1,6 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Stage, Layer, Line } from "react-konva";
-import * as ort from "onnxruntime-web";
+import { InferenceSession, Tensor } from "onnxruntime-web";
 
 interface Point {
   x: number;
@@ -12,6 +12,7 @@ const DrawCanvas: React.FC = () => {
   const [prediction, setPrediction] = useState("?");
   const [lines, setLines] = useState<Point[][]>([]);
   const isDrawing = useRef(false);
+  const session = useRef<InferenceSession | null>(null);
 
   const predDebounce = 450;
 
@@ -34,6 +35,21 @@ const DrawCanvas: React.FC = () => {
     "paper clip",
   ];
 
+  useEffect(() => {
+    (async () => {
+      try {
+        session.current = await InferenceSession.create("model3_4_large.onnx");
+      } catch (error) {
+        // TODO: Handle this error properly
+        console.error("Failed to load model", error);
+      }
+    })();
+
+    return () => {
+      session.current?.release()
+    }
+  }, []);
+
   const handleMouseDown = (e: any) => {
     isDrawing.current = true;
     const pos = e.target.getStage().getPointerPosition();
@@ -48,9 +64,8 @@ const DrawCanvas: React.FC = () => {
     const lastLine = lines[lines.length - 1].concat([point]);
     setLines(lines.slice(0, -1).concat([lastLine]));
 
-    console.log(Date.now() - lastDrawn);
     if (Date.now() - lastDrawn > predDebounce) {
-      console.log("hey :)");
+      // console.log("Evaluating drawing now");
       lastDrawn = Date.now();
       handleEvaluate();
     }
@@ -154,22 +169,22 @@ const DrawCanvas: React.FC = () => {
     return rasterImage;
   };
 
-  function softmax(arr: Float32Array): Float32Array {
+  const softmax = (arr: Float32Array): Float32Array => {
     const max = Math.max(...arr);
     const exps = arr.map((x) => Math.exp(x - max)); // Subtract max for numerical stability
     const sum = exps.reduce((a, b) => a + b, 0);
     return exps.map((x) => x / sum);
   }
 
-  function argMax(arr: Float32Array): number {
-    return arr.indexOf(Math.max(...arr));
-  }
+  const argMax = (arr: Float32Array): number => arr.indexOf(Math.max(...arr));
 
   async function ONNX(input: any) {
+    if (session.current === null) {
+      console.error("Attempted to run inference while InferenceSession is null")
+      return
+    }
     try {
-      const session = await ort.InferenceSession.create("model3_4_large.onnx");
-
-      const tensor = new ort.Tensor(
+      const tensor = new Tensor(
         "float32",
         new Float32Array(input),
         [1, 784]
@@ -177,7 +192,7 @@ const DrawCanvas: React.FC = () => {
 
       const inputMap = { input: tensor };
 
-      const outputMap = await session.run(inputMap);
+      const outputMap = await session.current.run(inputMap);
 
       const output = outputMap["output"].data as Float32Array;
 
