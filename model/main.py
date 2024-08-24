@@ -57,6 +57,7 @@ def unpack_drawing(file_handle):
     }
 
 
+# Array of drawing data objects from .bin file of training data
 def unpack_drawings(filename):
     path = os.getcwd()
     path = os.path.join(path,"model","trainingdata",filename)
@@ -68,6 +69,7 @@ def unpack_drawings(filename):
                 break
 
 
+# Taken from google quick, draw!'s dataset repository
 def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_color=(0,0,0), fg_color=(1,1,1)):
     """
     padding and line_diameter are relative to the original 256x256 image.
@@ -116,6 +118,7 @@ def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_co
     return raster_images
 
 
+# Convert an SVG into an array of (raw/unformated) strokes
 def svg_to_strokes(svg_string):
     file_like = StringIO(svg_string)
     paths, attributes, svg_attributes = svg2paths2(file_like)
@@ -143,7 +146,8 @@ def svg_to_strokes(svg_string):
                                 (segment.end.real, segment.end.imag)])
     return strokes
 
-def svgStokesReformat(input_list):
+# Format raw strokes (from svg_to_strokes) into what is used in the dataset
+def svg_strokes_reformat(input_list):
     result = []
 
     for stroke in input_list:
@@ -212,7 +216,7 @@ def normalize_strokes(strokes):
 
     return normalized_strokes
 
-def simplifyStrokes(input_strokes, epsilon=2.0):
+def simplify_strokes(input_strokes, epsilon=2.0):
     # Normalize strokes
     normalized_strokes = normalize_strokes(input_strokes)
 
@@ -229,37 +233,10 @@ def simplifyStrokes(input_strokes, epsilon=2.0):
 
     return simplified_strokes
 
+# An example drawing SVG
 svg_string1 = '''
 <svg width="813.6" height="731.7" xmlns="http://www.w3.org/2000/svg"><path d="M 423.0079892452468,260.6084756078029 423.0079892452468,259.60805919472114 422.00748991741887,259.60805919472114 417.00499327827924,259.60805919472114 402.9980026886883,259.60805919472114 384.98901478778566,259.60805919472114 365.9795275590551,261.6088920208847 345.9695410024966,268.61180691245715 325.9595544459382,279.6163874563567 308.95106587286347,293.6222172395016 293.9435759554446,311.6297126749736 279.93658536585366,334.63929017585446 269.9315920875744,358.64928408981706 262.92809679277894,381.65886159069794 258.92609948146725,407.66968833082416 257.9256001536393,431.6796822447868 257.9256001536393,454.6892597456677 262.92809679277894,477.6988372465486 276.9350873823699,500.70841474742946 297.9455732667563,523.7179922483103 324.95905511811026,542.725904096864 356.9750336086038,557.7321502930907 392.99300941040906,567.7363144239085 431.0119838678702,572.7383964893174 469.03095832533126,572.7383964893174 507.0499327827924,564.7350651846632 542.0674092567697,547.7279861622729 574.0833877472633,526.7192414875557 601.0968695986172,500.70841474742946 622.1073554830036,469.69550594189434 638.1153447282504,436.6817643101957 646.1193393508738,405.6688555046606 650.1213366621855,377.6571959383709 651.1218359900134,350.6459527851629 646.1193393508738,327.636375284282 632.1123487612829,303.62638137031934 611.1018628768965,280.61680386943846 585.0888803533704,257.6072263685576 557.0748991741885,237.59889810692206 528.0604186671787,222.5926519106954 500.0464374879969,212.58848777987762 478.0354522757826,208.58682212755053 458.0254657192241,209.5872385406323" stroke="black" stroke-width="7" fill="none" /><path d="M 476.0344536201267,648.7700438835325 475.0339542922988,649.7704602966143 474.0334549644709,649.7704602966143 474.0334549644709,647.7696274704507 474.0334549644709,643.7679618181236 474.0334549644709,638.7658797527147 474.0334549644709,633.7637976873058 474.0334549644709,631.7629648611422 474.0334549644709,627.7612992088151 474.0334549644709,617.7571350779973 474.0334549644709,600.7500560556072 474.0334549644709,579.7413113808898 474.0334549644709,556.731733880009 475.0339542922988,530.7209071398828 478.0354522757826,504.7100803997565 479.0359516036105,480.7000864857939 480.0364509314384,460.6917582241583 480.0364509314384,443.6846792017681 478.0354522757826,427.6780165924597 473.03295563664295,414.6726032223966 467.0299596696754,404.6684390915788 460.02646437487994,396.66510778692464 453.0229690800845,388.6617764822704 445.0189744574611,382.6592780037797 434.01348185135396,376.6567795252891 420.006491261763,369.65386463371664 403.9985020165162,361.6505333290624 387.99051277126944,351.64636919824466 372.98302285385057,340.6417886543451 358.97603226425963,330.63762452352734 343.96854234684076,320.63346039270954 327.96055310159403,311.6297126749736 309.9515652006914,302.62596495723756 290.9420779719608,294.6226336525834 276.9350873823699,287.6197187610109 267.93059343191857,284.6184695217656" stroke="black" stroke-width="7" fill="none" /><path d="M 272.9330900710582,426.6776001793779 271.93259074323026,426.6776001793779 282.93808334933743,426.6776001793779 312.95306318417516,426.6776001793779 356.9750336086038,423.6763509401326 408.0004993278279,414.6726032223966 454.02346840791245,401.6671898523335 492.0424428653735,385.66052724302506 521.0569233723833,368.65344822063486 537.0649126176301,355.6480348505718 548.0704052237372,344.6434543066722 552.0724025350489,338.6409558281815" stroke="black" stroke-width="7" fill="none" /><path d="M 311.95256385634724,554.7309010538454 312.95306318417516,554.7309010538454 318.9560591511427,554.7309010538454 339.96654503552907,554.7309010538454 375.98452083733434,553.7304846407636 419.0059919339351,547.7279861622729 463.0279623583637,531.7213235529646 503.0479354714807,510.7125788782472 534.0634146341463,485.70216855120276 557.0748991741885,463.69300746340366 572.0823890916074,443.6846792017681 582.0873823698867,428.6784330055415 586.0893796811984,417.67385246164196 587.0898790090263,412.67177039623306" stroke="black" stroke-width="7" fill="none" /></svg>
 '''
-
-# strokes = svg_to_strokes(svg_string1)
-# # print(simplifyStrokes(svgStokesReformat(strokes)))
-# inp = simplifyStrokes(svgStokesReformat(strokes))
-# raster = vector_to_raster([inp])[0]
-# print(raster)
-# grid = raster.reshape((28,28))
-# plt.imshow(grid,cmap="gray")
-# plt.show()
-
-# test_canvas = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,76,255,255,255,255,143,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,128,128,255,255,128,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,64,191,191,191,128,0,0,0,0,0,0,128,255,128,0,0,0,0,0,0,0,0,0,0,128,0,128,255,255,191,191,191,128,0,0,0,0,0,0,0,128,255,128,0,0,0,0,0,0,0,0,64,255,255,255,191,64,0,0,0,0,0,0,0,0,0,0,0,0,128,255,128,0,0,0,0,0,0,0,0,191,255,255,255,128,0,0,0,0,0,0,0,0,0,0,0,0,0,128,255,64,0,0,0,0,0,0,0,191,255,128,128,255,128,0,0,0,0,0,0,0,0,0,128,0,0,0,191,191,0,0,0,0,0,0,128,255,128,0,0,128,255,255,128,0,0,0,0,0,64,255,191,0,0,0,64,255,64,0,0,0,0,0,128,255,0,0,0,0,64,128,255,255,128,0,0,128,255,191,64,0,0,0,64,255,64,0,0,0,0,0,255,128,0,0,0,0,0,0,128,128,255,191,255,255,191,0,0,0,0,0,128,255,64,0,0,0,0,0,255,128,0,0,0,0,64,64,191,191,255,255,191,64,0,0,0,64,64,0,128,255,0,0,0,0,0,76,255,255,255,255,255,255,255,255,255,191,64,191,191,0,0,0,0,255,191,0,191,191,0,0,0,0,0,76,255,191,128,128,128,128,64,64,0,0,0,128,255,0,0,0,128,255,128,0,255,128,0,0,0,0,0,76,255,64,0,0,0,0,0,0,0,0,0,128,255,0,0,128,255,128,0,128,255,0,0,0,0,0,0,0,255,191,0,0,0,0,0,0,0,0,0,128,255,0,128,255,191,0,128,255,128,0,0,0,0,0,0,0,128,255,64,0,0,0,0,0,0,0,0,128,255,128,255,191,0,0,255,255,0,0,0,0,0,0,0,0,0,191,255,128,0,0,0,0,0,0,0,128,255,255,128,0,64,191,255,64,0,0,0,0,0,0,0,0,0,0,191,255,128,0,64,64,64,191,255,255,255,64,0,128,255,255,64,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255,191,191,191,255,255,191,0,0,0,0,0,0,0,0,0,0,0,0,0,0,128,128,128,191,255,255,255,255,255,255,255,191,64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,64,64,64,191,191,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,191,191,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,191,191,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,191,191,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,64,64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-# raster = np.array(test_canvas, dtype=np.float32).reshape(1, 784)
-# grid = raster.reshape((28,28))
-# plt.imshow(grid,cmap="gray")
-# plt.show()
-
-
-# import onnxruntime as ort
-
-# session = ort.InferenceSession("model3_1_large.onnx")
-# input_names = [inp.name for inp in session.get_inputs()]
-# output_names = [out.name for out in session.get_outputs()]
-# print("Input names:", input_names)
-# print("Output names:", output_names)
-
-# input_data = raster
-# result = session.run(['output'], {'input': input_data})
-# print(result)
 
 
 ################################
@@ -268,8 +245,8 @@ svg_string1 = '''
 # FOR INPUT SVG:
 # svgString = ```<svg ...>...</svg>```
 # rawStrokes = svg_to_strokes(svg_string)
-# reformattedStrokes = svgStokesReformat(rawStrokes)
-# simplifiedVector = simplifyStrokes(reformattedStrokes)
+# reformattedStrokes = svg_strokes_reformat(rawStrokes)
+# simplifiedVector = simplify_strokes(reformattedStrokes)
 # raster = vector_to_raster([simplifiedVector])[0]
 
 # FOR DATASET:
@@ -283,22 +260,18 @@ svg_string1 = '''
 # plt.show()
 ################################
 
-label_dict = {}
+labels = []
 values_dict = {}
-items = 0
 
-# modelCategories = ["airplane","angel","ant","anvil","apple","banana","basketball","broom","camera","dog", "dresser","hammer","hat","hexagon","paperclip","pencil"]
-
-mypath = os.path.join(os.getcwd(), "model", "trainingdata")
-arr = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-items = len(arr)
+datapath = os.path.join(os.getcwd(), "model", "trainingdata")
+trianing_data_names = [f for f in listdir(datapath) if isfile(join(datapath, f))]
+items = len(trianing_data_names) # Number of items
 print(f"Items: {items}")
 
-for i,v in enumerate(arr):
-    label_dict[i] = v
+labels = trianing_data_names
+for i,v in enumerate(trianing_data_names):
+    labels[i] = v.replace("full_binary_","").replace(".bin","")
     values_dict[v] = []
-
-print("kaka",label_dict)
 
 # for item in values_dict.keys():
 #     i = 0
@@ -314,7 +287,7 @@ print("kaka",label_dict)
 X = []
 y = []
 
-for key, value in label_dict.items():
+for key, value in enumerate(labels):
     data_i = values_dict[value]
     Xi = np.concatenate([data_i], axis = 0)
     yi = np.full((len(Xi), 1), key).ravel()
@@ -341,7 +314,7 @@ def view_images_grid(X, y):
         j = label_num % 10
         axs[i,j].imshow(image) #plot the data
         axs[i,j].axis('off')
-        axs[i,j].set_title(label_dict[y[r_label]])
+        axs[i,j].set_title(labels[y[r_label]])
 
     plt.show()
 
@@ -406,7 +379,7 @@ def get_pred(model, raster):
         _, predicted = torch.max(outputs, 1)
     
     predicted_label = predicted.item()
-    return label_dict[predicted_label].replace("full_binary_","").replace(".bin","")
+    return labels[predicted_label]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 
@@ -433,13 +406,13 @@ with torch.no_grad():
     evaluate_model(model, X_train, y_train, X_test, y_test)
 
     rawStrokes = svg_to_strokes(svg_string1)
-    reformattedStrokes = svgStokesReformat(rawStrokes)
-    simplifiedVector = simplifyStrokes(reformattedStrokes)
+    reformattedStrokes = svg_strokes_reformat(rawStrokes)
+    simplifiedVector = simplify_strokes(reformattedStrokes)
     raster = vector_to_raster([simplifiedVector])[0]
     print(f"PREDICTED DRAWING: {get_pred(model,raster)}")
     view_img(raster)
 
     for i in range(61, 9771, 299):
-        print(f"Actual: {label_dict[y_train[i]]}, Pred: {get_pred(model,X_train[i])}")
+        print(f"Actual: {labels[y_train[i]]}, Pred: {get_pred(model,X_train[i])}")
         view_img(X_train[i])
         # test_model(model,img, y_train[i])
