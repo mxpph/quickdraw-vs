@@ -113,10 +113,12 @@ const DrawCanvas: React.FC = () => {
       throw new Error("Could not get 2D context from canvas");
     }
 
+
     // Set up context to match Cairo settings
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.lineWidth = line_diameter;
+
 
     // Scale and translate
     const total_padding = padding * 2 + line_diameter;

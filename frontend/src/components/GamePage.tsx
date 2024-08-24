@@ -10,7 +10,7 @@ export default function GamePage() {
   const [errorShown, setErrorShown] = useState(false);
   const [hostButtonsShown, setHostButtonsShown] = useState(false);
 
-  const ws = useRef<WebSocket | null>(null)
+  const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     // Check if the user is the host and set the state accordingly
@@ -65,17 +65,11 @@ export default function GamePage() {
         </div>
       )}
       {!errorShown && hostButtonsShown && (
-        <button
-          className="btn btn-primary"
-          onClick={startGameMessage}
-        >
+        <button className="btn btn-primary" onClick={startGameMessage}>
           Start game
         </button>
       )}
-      <button
-        className="btn btn-primary"
-        onClick={winMessage}
-      >
+      <button className="btn btn-primary" onClick={winMessage}>
         Win round (dev button)
       </button>
       <div className="w-full grid place-items-center my-3">

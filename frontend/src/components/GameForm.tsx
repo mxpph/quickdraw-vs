@@ -1,79 +1,199 @@
-import { FormEvent, useState } from "react"
-import Cookies from 'js-cookie'
+import { FormEvent, useState } from "react";
+import Cookies from "js-cookie";
 
 export default function GameForm() {
+  const [createFormData, setCreateFormData] = useState({
+    player_name: "",
+    max_players: "",
+    rounds: "",
+  });
 
-  const [formData, setFormData] = useState({
-    game_id: '',
-    player_name: '',
-  })
+  const [joinFormData, setJoinFormData] = useState({
+    game_id: "",
+    player_name: "",
+  });
 
-  const handleChange = (e: any) => {
-    setFormData({
-      ...formData,
+  const [error, setError] = useState<string>("");
+
+  const handleCreateFormChange = (e: any) => {
+    setCreateFormData({
+      ...createFormData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+  };
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  const handleJoinFormChange = (e: any) => {
+    setJoinFormData({
+      ...joinFormData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
+  async function handleSubmit(event: FormEvent<HTMLFormElement>, form: string) {
+    event.preventDefault();
+
+    var url;
+    var formData;
+    if (form === "join") {
+      url = "/join-game";
+      formData = joinFormData;
+    } else {
+      url = "/create-game";
+      formData = createFormData;
+    }
     try {
-      const response = await fetch("http://localhost:3000/create-game", {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-      })
+      });
       if (response.ok) {
-        const result = await response.json()
-        const inFiveMinutes = new Date(new Date().getTime() + 5 * 60 * 1000)
-        Cookies.set('quickdrawvs_game_id', result.game_id, {
-            expires: inFiveMinutes
-        })
-        Cookies.set('quickdrawvs_player_id', result.player_id, {
-            expires: inFiveMinutes
-        })
-        sessionStorage.setItem("quickdrawvs_is_host", result.is_host)
-        window.location.href = `/game.html`
+        const result = await response.json();
+        const inFiveMinutes = new Date(new Date().getTime() + 5 * 60 * 1000);
+        Cookies.set("quickdrawvs_game_id", result.game_id, {
+          expires: inFiveMinutes,
+        });
+        Cookies.set("quickdrawvs_player_id", result.player_id, {
+          expires: inFiveMinutes,
+        });
+        sessionStorage.setItem("quickdrawvs_is_host", result.is_host);
+        window.location.href = `/game.html`;
       } else {
-        const errorText = await response.text()
-        throw new Error(`Network response was not ok: ${response.statusText}, ${errorText}`)
+        const error = await response.json();
+        throw new Error(error.detail);
       }
-    } catch (error) {
-      console.error("Error:", error)
+    } catch (error: any) {
+      setError(error.message);
     }
   }
+
   return (
-    <form
-      noValidate={true}
-      onSubmit={handleSubmit}
-      className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
-    >
-      <p>Game ID</p>
-      <input
-        type="text"
-        className="rounded-md p-2 bg-neutral-200 shadow-md"
-        name="game_id"
-        placeholder="Blank for new game"
-        onChange={handleChange}
-        required
-      />
-      <p>Player Name</p>
-      <input
-        type="text"
-        className="rounded-md p-2 bg-neutral-200 shadow-md"
-        name="player_name"
-        onChange={handleChange}
-        required
-      />
-      <button
-        type="submit"
-        className="bg-primary mt-4 font-semibold text-white rounded-lg p-2"
-      >
-        Join Game
-      </button>
-    </form>
-  )
+    <div className="grid gap-4">
+      {error && (
+        <div role="alert" className="alert alert-error">
+          <span>Error: {error}</span>
+          <div className="w-full flex flex-row justify-end">
+            <button
+              className="btn btn-sm btn-circle btn-outline"
+              onClick={() => {
+                setError("");
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex flex-row flex-wrap gap-4">
+        <form
+          id="createForm"
+          onSubmit={(e: any) => handleSubmit(e, "create")}
+          className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
+        >
+          <label className="form-control w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Player Name</span>
+            </div>
+            <input
+              type="text"
+              className="input input-bordered input-primary w-full max-w-xs"
+              name="player_name"
+              maxLength={16}
+              onChange={handleCreateFormChange}
+              required
+            />
+          </label>
+          <div className="w-full grid grid-cols-2 grid-rows-1 gap-2">
+            <select
+              className="select select-primary"
+              name="max_players"
+              onChange={handleCreateFormChange}
+              form="createForm"
+            >
+              <option disabled selected>
+                Max players
+              </option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6</option>
+            </select>
+            <select
+              className="select select-primary"
+              name="rounds"
+              onChange={handleCreateFormChange}
+              form="createForm"
+            >
+              <option disabled selected>
+                Rounds
+              </option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+            </select>
+          </div>
+          <button type="submit" className="btn btn-primary">
+            Create Game
+          </button>
+        </form>
+        <form
+          id="joinForm"
+          onSubmit={(e: any) => handleSubmit(e, "join")}
+          className="grid place-items-center shadow-md bg-neutral-50 rounded px-8 pt-6 pb-8 mb-4 gap-2"
+        >
+          <label className="form-control w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Game ID</span>
+            </div>
+            <input
+              type="text"
+              className="input input-bordered input-primary w-full max-w-xs"
+              name="game_id"
+              maxLength={36}
+              onChange={handleJoinFormChange}
+              required
+            />
+          </label>
+          <label className="form-control w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Player Name</span>
+            </div>
+            <input
+              type="text"
+              className="input input-bordered input-primary w-full max-w-xs"
+              name="player_name"
+              maxLength={16}
+              onChange={handleJoinFormChange}
+              required
+            />
+          </label>
+          <button type="submit" className="btn btn-primary">
+            Join Game
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 }
