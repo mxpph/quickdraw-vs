@@ -11,6 +11,7 @@ let lastDrawn = Date.now();
 const DrawCanvas: React.FC = () => {
   const [prediction, setPrediction] = useState("?");
   const [lines, setLines] = useState<Point[][]>([]);
+  const [confidence, setConfidence] = useState(0)
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
 
@@ -237,7 +238,11 @@ const DrawCanvas: React.FC = () => {
     ONNX(rasterArray).then((res) => {
       console.log(res);
       res = res as Float32Array;
-      setPrediction(modelCategories[argMax(res)]);
+      let i = argMax(res)
+      setPrediction(modelCategories[i]);
+      let prob = softmax(res)[i]
+      let probPercent = Math.floor((prob * 1000))/10
+      setConfidence(probPercent)
     });
   };
 
@@ -245,6 +250,11 @@ const DrawCanvas: React.FC = () => {
     <div>
       <div className="grid place-items-center">
         <p className="text-xl font-semibold">PREDICTION: {prediction}</p>
+        {(confidence > 70) ?  (
+          <p className="text-lg font-medium text-green-400">Confidence (dev): {confidence+"%"}</p>
+        ) : (
+          <p className="text-lg font-medium">Confidence (dev): {confidence+"%"}</p>
+        )}
       </div>
       <Stage
         width={window.innerWidth * 0.9}
