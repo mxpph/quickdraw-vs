@@ -7,11 +7,15 @@ interface Point {
   y: number;
 }
 
+interface DrawCanvasProps {
+  dataPass: (data: string) => void;
+}
+
 let lastDrawn = Date.now();
-const DrawCanvas: React.FC = () => {
+const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass }) => {
   const [prediction, setPrediction] = useState("?");
   const [lines, setLines] = useState<Point[][]>([]);
-  const [confidence, setConfidence] = useState(0)
+  const [confidence, setConfidence] = useState(0);
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
 
@@ -47,8 +51,8 @@ const DrawCanvas: React.FC = () => {
     })();
 
     return () => {
-      session.current?.release()
-    }
+      session.current?.release();
+    };
   }, []);
 
   const handleMouseDown = (e: any) => {
@@ -114,12 +118,10 @@ const DrawCanvas: React.FC = () => {
       throw new Error("Could not get 2D context from canvas");
     }
 
-
     // Set up context to match Cairo settings
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.lineWidth = line_diameter;
-
 
     // Scale and translate
     const total_padding = padding * 2 + line_diameter;
@@ -177,21 +179,19 @@ const DrawCanvas: React.FC = () => {
     const exps = arr.map((x) => Math.exp(x - max)); // Subtract max for numerical stability
     const sum = exps.reduce((a, b) => a + b, 0);
     return exps.map((x) => x / sum);
-  }
+  };
 
   const argMax = (arr: Float32Array): number => arr.indexOf(Math.max(...arr));
 
   async function ONNX(input: any) {
     if (session.current === null) {
-      console.error("Attempted to run inference while InferenceSession is null")
-      return
+      console.error(
+        "Attempted to run inference while InferenceSession is null"
+      );
+      return;
     }
     try {
-      const tensor = new Tensor(
-        "float32",
-        new Float32Array(input),
-        [1, 784]
-      );
+      const tensor = new Tensor("float32", new Float32Array(input), [1, 784]);
 
       const inputMap = { input: tensor };
 
@@ -199,7 +199,7 @@ const DrawCanvas: React.FC = () => {
 
       const output = outputMap["output"].data as Float32Array;
 
-      console.log(output);
+      // console.log(output);
       return output;
     } catch (error) {
       console.error("Error running ONNX model:", error);
@@ -236,13 +236,16 @@ const DrawCanvas: React.FC = () => {
     const rasterArray = rasterizeStrokes(normalizedStrokes);
 
     ONNX(rasterArray).then((res) => {
-      console.log(res);
+      // console.log(res);
       res = res as Float32Array;
-      let i = argMax(res)
+      let i = argMax(res);
       setPrediction(modelCategories[i]);
-      let prob = softmax(res)[i]
-      let probPercent = Math.floor((prob * 1000))/10
-      setConfidence(probPercent)
+      let prob = softmax(res)[i];
+      let probPercent = Math.floor(prob * 1000) / 10;
+      setConfidence(probPercent);
+      if (probPercent > 70) {
+        dataPass(prediction);
+      }
     });
   };
 
@@ -250,10 +253,14 @@ const DrawCanvas: React.FC = () => {
     <div>
       <div className="grid place-items-center">
         <p className="text-xl font-semibold">PREDICTION: {prediction}</p>
-        {(confidence > 70) ?  (
-          <p className="text-lg font-medium text-green-400">Confidence (dev): {confidence+"%"}</p>
+        {confidence > 70 ? (
+          <p className="text-lg font-medium text-green-400">
+            Confidence (dev): {confidence + "%"}
+          </p>
         ) : (
-          <p className="text-lg font-medium">Confidence (dev): {confidence+"%"}</p>
+          <p className="text-lg font-medium">
+            Confidence (dev): {confidence + "%"}
+          </p>
         )}
       </div>
       <Stage

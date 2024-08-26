@@ -9,6 +9,7 @@ const Canvas = dynamic(() => import("./DrawCanvas"), {
 export default function GamePage() {
   const [errorShown, setErrorShown] = useState(false);
   const [hostButtonsShown, setHostButtonsShown] = useState(false);
+  const [wordToGuess, setWordToGuess] = useState("");
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -33,6 +34,21 @@ export default function GamePage() {
 
     ws.current.onmessage = (event) => {
       console.log(event.data);
+      try {
+        const data = JSON.parse(event.data);
+        switch (data.type) {
+          case "next_round":
+            setWordToGuess(data.word);
+            break;
+          case "game_over":
+            // TODO: handle this
+            break;
+        }
+      } catch (error: any) {
+        ws.current?.close();
+        setErrorShown(true);
+        ws.current = null;
+      }
     };
 
     ws.current.onclose = (event) => {
@@ -54,6 +70,12 @@ export default function GamePage() {
     ws.current?.send('{"type": "win"}');
   };
 
+  const handlePredictionData = (data: string) => {
+    if (data === wordToGuess) {
+      winMessage();
+    }
+  };
+
   return (
     <div className="my-3 mx-5">
       {errorShown && (
@@ -72,14 +94,17 @@ export default function GamePage() {
       <button className="btn btn-primary" onClick={winMessage}>
         Win round (dev button)
       </button>
-      <div className="w-full grid place-items-center my-3">
-        <div
-          className="outline outline-2 outline-offset-2 outline-primary rounded-xl overflow-hidden w-[90vw] shadow-xl grid place-items-center"
-          id="canvasdiv"
-        >
-          <Canvas />
+      {wordToGuess && (
+        <div className="w-full grid place-items-center my-3">
+          <h2>Draw: {wordToGuess}</h2>
+          <div
+            className="outline outline-2 outline-offset-2 outline-primary rounded-xl overflow-hidden w-[90vw] shadow-xl grid place-items-center"
+            id="canvasdiv"
+          >
+            <Canvas dataPass={handlePredictionData} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
