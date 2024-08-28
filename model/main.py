@@ -1,3 +1,5 @@
+'''This file trains the model'''
+
 import struct
 from struct import unpack
 import os
@@ -27,9 +29,11 @@ from torchvision import datasets, transforms
 import torch.onnx
 import onnx
 
-from ctypes.macholib import dyld # to fix cairo bug & not have to run: 
-                                 # export DYLD_LIBRARY_PATH="/opt/homebrew/opt/cairo/lib:$DYLD_LIBRARY_PATH"
-                                 # Should be macos only tho. thread: https://github.com/Kozea/CairoSVG/issues/354
+from ctypes.macholib import dyld
+
+# to fix cairo bug & not have to run:
+# export DYLD_LIBRARY_PATH="/opt/homebrew/opt/cairo/lib:$DYLD_LIBRARY_PATH"
+# Should be macos only tho. thread: https://github.com/Kozea/CairoSVG/issues/354
 dyld.DEFAULT_LIBRARY_FALLBACK.append("/opt/homebrew/lib")
 
 import cairocffi as cairo
@@ -70,13 +74,15 @@ def unpack_drawings(filename):
 
 
 # Taken from google quick, draw!'s dataset repository
-def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_color=(0,0,0), fg_color=(1,1,1)):
-    """
-    padding and line_diameter are relative to the original 256x256 image.
-    """
-    
+def vector_to_raster(
+        vector_images, side=28,
+        line_diameter=16, # relative to the original 256x256 image
+        padding=16, # relative to the original 256x256 image
+        bg_color=(0,0,0),
+        fg_color=(1,1,1)):
+
     original_side = 256.
-    
+
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, side, side)
     ctx = cairo.Context(surface)
     ctx.set_antialias(cairo.ANTIALIAS_BEST)
@@ -97,14 +103,14 @@ def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_co
         # clear background
         ctx.set_source_rgb(*bg_color)
         ctx.paint()
-        
+
         bbox = np.hstack(vector_image).max(axis=1)
         offset = ((original_side, original_side) - bbox) / 2.
         offset = offset.reshape(-1,1)
         centered = [stroke + offset for stroke in vector_image]
 
         # draw strokes, this is the most cpu-intensive part
-        ctx.set_source_rgb(*fg_color)        
+        ctx.set_source_rgb(*fg_color)
         for xv, yv in centered:
             ctx.move_to(xv[0], yv[0])
             for x, y in zip(xv, yv):
@@ -114,7 +120,7 @@ def vector_to_raster(vector_images, side=28, line_diameter=16, padding=16, bg_co
         data = surface.get_data()
         raster_image = np.copy(np.asarray(data)[::4])
         raster_images.append(raster_image)
-    
+
     return raster_images
 
 
@@ -127,7 +133,8 @@ def svg_to_strokes(svg_string):
     for path in paths:
         for segment in path:
             if isinstance(segment, svgpathtools.path.Line):
-                strokes.append([(segment.start.real, segment.start.imag), (segment.end.real, segment.end.imag)])
+                strokes.append([(segment.start.real, segment.start.imag),
+                                (segment.end.real, segment.end.imag)])
             elif isinstance(segment, svgpathtools.path.CubicBezier):
                 strokes.append([(segment.start.real, segment.start.imag),
                                 (segment.control1.real, segment.control1.imag),
@@ -154,7 +161,7 @@ def svg_strokes_reformat(input_list):
         x_coords = [math.floor(coord[0]) for coord in stroke]
         y_coords = [math.floor(coord[1]) for coord in stroke]
         result.append((tuple(x_coords), tuple(y_coords)))
-    
+
     return result
 
 # Ramer-Douglas-Peucker algorithm
@@ -221,7 +228,8 @@ def simplify_strokes(input_strokes, epsilon=2.0):
     normalized_strokes = normalize_strokes(input_strokes)
 
     # Resample strokes
-    resampled_strokes = [resample_stroke(list(zip(stroke[0], stroke[1]))) for stroke in normalized_strokes]
+    resampled_strokes = [resample_stroke(list(zip(stroke[0], stroke[1])))
+                                        for stroke in normalized_strokes]
 
     # Simplify strokes
     simplified_strokes = []
@@ -291,7 +299,7 @@ for key, value in enumerate(labels):
     data_i = values_dict[value]
     Xi = np.concatenate([data_i], axis = 0)
     yi = np.full((len(Xi), 1), key).ravel()
-    
+
     X.append(Xi)
     y.append(yi)
 
@@ -305,8 +313,8 @@ print(f"X: {type(X[0])}, SHAPE:\n")
 print(f"Y: {type(y[0])}\n")
 
 def view_images_grid(X, y):
-    fig, axs = plt.subplots(5, 10, figsize=(20,10))
-    
+    _, axs = plt.subplots(5, 10, figsize=(20,10))
+
     for label_num in range(0,50):
         r_label = random.randint(0, len(X) - 1)
         image = X[r_label].reshape((28,28))  #reshape images
@@ -328,7 +336,7 @@ class SimpleMLP(nn.Module):
         self.fc3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
         self.fc4 = nn.Linear(hidden_sizes[2], hidden_sizes[3])
         self.fc5 = nn.Linear(hidden_sizes[3], output_size)
-        
+
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -341,7 +349,7 @@ class SimpleMLP(nn.Module):
 def train_model(model, X_train, y_train, epochs=10, learning_rate=0.01):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    
+
     model.train()
     for epoch in range(epochs):
         optimizer.zero_grad()
@@ -377,7 +385,7 @@ def get_pred(model, raster):
     with torch.no_grad():
         outputs = model(raster_tensor)
         _, predicted = torch.max(outputs, 1)
-    
+
     predicted_label = predicted.item()
     return labels[predicted_label]
 
@@ -391,8 +399,10 @@ model = SimpleMLP(input_size, hidden_sizes, output_size)
 
 train_model(model, X_train, y_train, epochs=200, learning_rate=0.03)
 
-torch.save(model, "model3_4_large.pt")
-torch.onnx.export(model,torch.tensor(X_train[0], dtype=torch.float).unsqueeze(0),"model4_3_large.onnx",export_params=True,do_constant_folding=True,input_names = ['input'],output_names = ['output'])
+torch.save(model, "model4_3_large.pt")
+torch.onnx.export(model, torch.tensor(X_train[0], dtype=torch.float).unsqueeze(0),
+                  "model4_3_large.onnx", export_params=True, do_constant_folding=True,
+                  input_names = ['input'], output_names = ['output'])
 
 # model = torch.load("model3_1_large.pt")
 
