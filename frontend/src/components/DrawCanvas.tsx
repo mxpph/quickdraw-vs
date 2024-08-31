@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import { InferenceSession, Tensor } from "onnxruntime-web";
+import { clear } from "console";
 
 interface Point {
   x: number;
@@ -9,15 +10,18 @@ interface Point {
 
 interface DrawCanvasProps {
   dataPass: (data: string) => void;
+  onParentClearCanvas: () => void;
+  clearCanvas: boolean;
 }
 
 let lastDrawn = Date.now();
-const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass }) => {
+const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass, onParentClearCanvas, clearCanvas }) => {
   const [prediction, setPrediction] = useState("?");
   const [lines, setLines] = useState<Point[][]>([]);
   const [confidence, setConfidence] = useState(0);
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
+
 
   const predDebounce = 450;
 
@@ -249,6 +253,20 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass }) => {
     });
   };
 
+  useEffect(() => { // effect to check if clearCanvas is true
+    console.log("b")
+    if (clearCanvas) {
+      console.log("c")
+      setLines([])
+      onParentClearCanvas() // call the callback function to reset the state in parent component
+    }
+  }, [clearCanvas, onParentClearCanvas])
+
+  const clearDrawing = () => {
+    console.log("d")
+    setLines([]);
+  };
+
   return (
     <div>
       <div className="grid place-items-center">
@@ -302,6 +320,12 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass }) => {
           onClick={handleEvaluate}
         >
           Evaluate drawing
+        </button>
+        <button
+          className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1"
+          onClick={clearDrawing}
+        >
+          Clear Drawing from DrawCanvas.tsx
         </button>
       </div>
     </div>

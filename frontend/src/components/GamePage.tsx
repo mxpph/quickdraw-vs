@@ -10,6 +10,7 @@ export default function GamePage() {
   const [errorShown, setErrorShown] = useState(false);
   const [hostButtonsShown, setHostButtonsShown] = useState(false);
   const [wordToGuess, setWordToGuess] = useState("");
+  const [clearCanvas, setClearCanvas] = useState(false);
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -76,6 +77,17 @@ export default function GamePage() {
     }
   };
 
+  const handleClearCanvas = () => {
+    console.log("a")
+    setClearCanvas(true);
+  };
+
+  const onClearCanvas = () => {
+    console.log("m")
+    setClearCanvas(false);
+  };
+
+
   return (
     <div className="my-3 mx-5">
       {errorShown && (
@@ -94,15 +106,18 @@ export default function GamePage() {
       <button className="btn btn-primary" onClick={winMessage}>
         Win round (dev button)
       </button>
-      {wordToGuess && (
+      {(wordToGuess || !wordToGuess) && ( // '|| !wordToGuess' only for development
         <div className="w-full grid place-items-center my-3">
           <h2>Draw: {wordToGuess}</h2>
           <div
             className="outline outline-2 outline-offset-2 outline-primary rounded-xl overflow-hidden w-[90vw] shadow-xl grid place-items-center"
             id="canvasdiv"
           >
-            <Canvas dataPass={handlePredictionData} />
+            <Canvas dataPass={handlePredictionData} onParentClearCanvas={onClearCanvas} clearCanvas={clearCanvas} />
           </div>
+          <button className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1" onClick={handleClearCanvas}>
+            Clear Canvas From GamePage.tsx
+          </button>
         </div>
       )}
     </div>
