@@ -1,6 +1,7 @@
 "use client";
 import { error } from "console";
 import dynamic from "next/dynamic";
+import Cookies from "js-cookie";
 import { useState, useEffect, useRef } from "react";
 
 const Canvas = dynamic(() => import("./DrawCanvas"), {
@@ -8,10 +9,14 @@ const Canvas = dynamic(() => import("./DrawCanvas"), {
 });
 
 export default function GamePage() {
+
+
   const [errorShown, setErrorShown] = useState(false);
   const [hostButtonsShown, setHostButtonsShown] = useState(false);
   const [wordToGuess, setWordToGuess] = useState("");
   const [clearCanvas, setClearCanvas] = useState(false);
+
+  let game_id = ""
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -20,6 +25,8 @@ export default function GamePage() {
     setHostButtonsShown(
       sessionStorage.getItem("quickdrawvs_is_host") === "True"
     );
+    game_id = Cookies.get("quickdrawvs_game_id") as string
+
   }, []); // Adding an empty dependency array to ensure this runs only once on mount
 
   useEffect(() => {
