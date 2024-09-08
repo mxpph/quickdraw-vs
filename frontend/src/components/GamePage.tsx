@@ -108,7 +108,7 @@ export default function GamePage() {
           </span>
         </div>
       )}
-      { !errorShown &&(
+      { !errorShown && !wordToGuess &&(
         <WaitingArea hostButtonsShown={hostButtonsShown} gameId={gameId} startGame={startGameMessage} />
       )}
       <button className="btn btn-primary absolute top-0 left-0 bg-opacity-50" onClick={winMessage}>
