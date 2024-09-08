@@ -100,7 +100,7 @@ export default function GamePage() {
 
   return (
     <div className="mx-5">
-      {!errorShown && (
+      {errorShown && (
         <div role="alert" className="alert alert-error">
           <span>
             Error when connecting to the game server. Are you sure you have the
