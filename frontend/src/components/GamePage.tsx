@@ -25,6 +25,7 @@ export default function GamePage() {
     setHostButtonsShown(
       sessionStorage.getItem("quickdrawvs_is_host") === "True"
     );
+    setGameWinner("")
     setGameId( Cookies.get("quickdrawvs_game_id") as string )
 
   }, []); // Adding an empty dependency array to ensure this runs only once on mount
@@ -118,7 +119,7 @@ export default function GamePage() {
       <button className="btn btn-primary" onClick={winMessage}>
         Win round (dev button)
       </button>
-      {(wordToGuess) && ( // '|| !wordToGuess' only for development
+      {(wordToGuess && gameWinner === "") && ( // '|| !wordToGuess' only for development
         <div className="w-full grid place-items-center my-3">
           <h2 className="text-3xl">Draw: {wordToGuess}</h2>
           <div
@@ -130,6 +131,17 @@ export default function GamePage() {
           <button className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1" onClick={handleClearCanvas}>
             Clear Canvas From GamePage.tsx
           </button>
+        </div>
+      )}
+      {gameWinner !== "" && (
+        <div className="w-full grid place-items-center">
+          <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-lg p-48 gap-2 align-middle shadow">
+              <p className="text-xl">WINNER IS</p>
+              <b className="text-xl font-bold mb-4">{gameWinner}</b>
+              <a href="/" className="btn btn-primary" onClick={startGameMessage}>
+                Return to home
+              </a>
+          </div>
         </div>
       )}
     </div>
