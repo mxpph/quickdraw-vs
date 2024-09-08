@@ -13,10 +13,10 @@ export default function GamePage() {
 
   const [errorShown, setErrorShown] = useState(false);
   const [hostButtonsShown, setHostButtonsShown] = useState(false);
+  const [gameId, setGameId] = useState("")
   const [wordToGuess, setWordToGuess] = useState("");
   const [clearCanvas, setClearCanvas] = useState(false);
-
-  let game_id = ""
+  const [gameWinner, setGameWinner] = useState("")
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -25,7 +25,7 @@ export default function GamePage() {
     setHostButtonsShown(
       sessionStorage.getItem("quickdrawvs_is_host") === "True"
     );
-    game_id = Cookies.get("quickdrawvs_game_id") as string
+    setGameId( Cookies.get("quickdrawvs_game_id") as string )
 
   }, []); // Adding an empty dependency array to ensure this runs only once on mount
 
@@ -48,6 +48,7 @@ export default function GamePage() {
         switch (data.type) {
           case "next_round":
             setWordToGuess(data.word);
+            handleClearCanvas()
             break;
           case "game_over":
             // TODO: handle this
@@ -86,12 +87,10 @@ export default function GamePage() {
   };
 
   const handleClearCanvas = () => {
-    console.log("a")
     setClearCanvas(true);
   };
 
   const onClearCanvas = () => {
-    console.log("m")
     setClearCanvas(false);
   };
 
@@ -109,7 +108,7 @@ export default function GamePage() {
       { !errorShown && hostButtonsShown  &&(
         <div className="w-full grid place-items-center">
           <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-lg p-48 gap-4 align-middle shadow">
-              <p className="text-xl">Game ID: {errorShown}</p>
+              <p className="text-xl">Game ID: {gameId}</p>
               <button className="btn btn-primary" onClick={startGameMessage}>
                 Start game
               </button>
@@ -121,7 +120,7 @@ export default function GamePage() {
       </button>
       {(wordToGuess) && ( // '|| !wordToGuess' only for development
         <div className="w-full grid place-items-center my-3">
-          <h2>Draw: {wordToGuess}</h2>
+          <h2 className="text-3xl">Draw: {wordToGuess}</h2>
           <div
             className="outline outline-2 outline-offset-2 outline-primary rounded-xl overflow-hidden w-[90vw] shadow-xl grid place-items-center"
             id="canvasdiv"
