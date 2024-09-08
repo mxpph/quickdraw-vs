@@ -269,17 +269,25 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass, onParentClearCanvas, 
 
   return (
     <div>
-      <div className="grid place-items-center">
-        <p className="text-xl font-semibold">PREDICTION: {prediction}</p>
-        {confidence > 70 ? (
-          <p className="text-lg font-medium text-green-400">
-            Confidence (dev): {confidence + "%"}
-          </p>
-        ) : (
-          <p className="text-lg font-medium">
-            Confidence (dev): {confidence + "%"}
-          </p>
-        )}
+      <div className="grid grid-cols-3 place-items-center">
+        <div className="grid place-items-center">
+          <p className="text-xl font-semibold">PREDICTION: {prediction}</p>
+          {confidence > 70 ? (
+            <p className="text-lg font-medium text-green-400">
+              Confidence (dev): {confidence + "%"}
+            </p>
+          ) : (
+            <p className="text-lg font-medium">
+              Confidence (dev): {confidence + "%"}
+            </p>
+          )}
+        </div>
+        <button
+          className="btn col-span-1 mt-1 btn-primary btn-outline"
+          onClick={clearDrawing}
+        >
+          Clear Canvas
+        </button>
       </div>
       <Stage
         width={window.innerWidth * 0.9}
@@ -303,7 +311,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass, onParentClearCanvas, 
         </Layer>
       </Stage>
       <div className="flex justify-center items-center align-middle">
-        <button
+        {/* <button
           className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1"
           onClick={handleRasterize}
         >
@@ -320,13 +328,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass, onParentClearCanvas, 
           onClick={handleEvaluate}
         >
           Evaluate drawing
-        </button>
-        <button
-          className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1"
-          onClick={clearDrawing}
-        >
-          Clear Drawing from DrawCanvas.tsx
-        </button>
+        </button> */}
       </div>
     </div>
   );

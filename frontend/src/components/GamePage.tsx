@@ -1,8 +1,10 @@
 "use client";
 import { error } from "console";
+import Link from "next/link"
 import dynamic from "next/dynamic";
 import Cookies from "js-cookie";
 import { useState, useEffect, useRef } from "react";
+import WaitingArea from "./WaitingArea";
 
 const Canvas = dynamic(() => import("./DrawCanvas"), {
   ssr: false,
@@ -52,7 +54,7 @@ export default function GamePage() {
             handleClearCanvas()
             break;
           case "game_over":
-            // TODO: handle this
+            setGameWinner(data.winner)
             break;
         }
       } catch (error: any) {
@@ -97,8 +99,8 @@ export default function GamePage() {
 
 
   return (
-    <div className="my-3 mx-5">
-      {errorShown && (
+    <div className="mx-5">
+      {!errorShown && (
         <div role="alert" className="alert alert-error">
           <span>
             Error when connecting to the game server. Are you sure you have the
@@ -106,41 +108,31 @@ export default function GamePage() {
           </span>
         </div>
       )}
-      { !errorShown && hostButtonsShown  &&(
-        <div className="w-full grid place-items-center">
-          <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-lg p-48 gap-4 align-middle shadow">
-              <p className="text-xl">Game ID: {gameId}</p>
-              <button className="btn btn-primary" onClick={startGameMessage}>
-                Start game
-              </button>
-          </div>
-        </div>
+      { !errorShown &&(
+        <WaitingArea hostButtonsShown={hostButtonsShown} gameId={gameId} startGame={startGameMessage} />
       )}
-      <button className="btn btn-primary" onClick={winMessage}>
+      <button className="btn btn-primary absolute top-0 left-0 bg-opacity-50" onClick={winMessage}>
         Win round (dev button)
       </button>
-      {(wordToGuess && gameWinner === "") && ( // '|| !wordToGuess' only for development
-        <div className="w-full grid place-items-center my-3">
-          <h2 className="text-3xl">Draw: {wordToGuess}</h2>
+      {(wordToGuess && gameWinner === "") && ( // !wordToGuess' only for development
+        <div className="w-full grid place-items-center align-middle h-[95vh] mt-2">
+          <h2 className="text-3xl mb-4 text-center justify-center align-middle h-[5vh]">Draw: <b className="font-semibold">{wordToGuess}</b></h2>
           <div
-            className="outline outline-2 outline-offset-2 outline-primary rounded-xl overflow-hidden w-[90vw] shadow-xl grid place-items-center"
+            className="outline outline-2 outline-offset-2 outline-primary rounded-xl overflow-hidden w-[90vw] h-full shadow-xl grid place-items-center"
             id="canvasdiv"
           >
             <Canvas dataPass={handlePredictionData} onParentClearCanvas={onClearCanvas} clearCanvas={clearCanvas} />
           </div>
-          <button className="my-2 mx-1 rounded-xl shadow shadow-neutral-400 px-2 bg-neutral-100 py-1" onClick={handleClearCanvas}>
-            Clear Canvas From GamePage.tsx
-          </button>
         </div>
       )}
       {gameWinner !== "" && (
         <div className="w-full grid place-items-center">
-          <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-lg p-48 gap-2 align-middle shadow">
-              <p className="text-xl">WINNER IS</p>
-              <b className="text-xl font-bold mb-4">{gameWinner}</b>
-              <a href="/" className="btn btn-primary" onClick={startGameMessage}>
-                Return to home
-              </a>
+          <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-3xl p-48 gap-2 align-middle shadow">
+              <p className="text-xl">THE WINNER IS</p>
+              <b className="text-xl font-bold mb-4">{gameWinner}!</b>
+              <Link href="/" className="btn btn-primary" onClick={startGameMessage}>
+                Return home
+              </Link>
           </div>
         </div>
       )}
