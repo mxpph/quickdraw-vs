@@ -1,4 +1,5 @@
 "use client";
+import { error } from "console";
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
 
@@ -98,15 +99,20 @@ export default function GamePage() {
           </span>
         </div>
       )}
-      {!errorShown && hostButtonsShown && (
-        <button className="btn btn-primary" onClick={startGameMessage}>
-          Start game
-        </button>
+      { !errorShown && hostButtonsShown  &&(
+        <div className="w-full grid place-items-center">
+          <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-lg p-48 gap-4 align-middle shadow">
+              <p className="text-xl">Game ID: {errorShown}</p>
+              <button className="btn btn-primary" onClick={startGameMessage}>
+                Start game
+              </button>
+          </div>
+        </div>
       )}
       <button className="btn btn-primary" onClick={winMessage}>
         Win round (dev button)
       </button>
-      {(wordToGuess || !wordToGuess) && ( // '|| !wordToGuess' only for development
+      {(wordToGuess) && ( // '|| !wordToGuess' only for development
         <div className="w-full grid place-items-center my-3">
           <h2>Draw: {wordToGuess}</h2>
           <div
