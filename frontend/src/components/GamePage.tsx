@@ -36,16 +36,11 @@ export default function GamePage() {
     // Initialize WebSocket and store it in the ref
     ws.current = new WebSocket("ws://localhost:3000/ws");
 
-    ws.current.onopen = (event) => {
-      console.log("WebSocket connected!");
-    };
-
     ws.current.onerror = (event) => {
       setErrorShown(true);
     };
 
     ws.current.onmessage = (event) => {
-      console.log(event.data);
       try {
         const data = JSON.parse(event.data);
         switch (data.type) {
@@ -62,10 +57,6 @@ export default function GamePage() {
         setErrorShown(true);
         ws.current = null;
       }
-    };
-
-    ws.current.onclose = (event) => {
-      console.log("WebSocket closed with code", event.code);
     };
 
     // Clean up WebSocket when the component unmounts
@@ -114,7 +105,7 @@ export default function GamePage() {
       <button className="btn btn-primary absolute top-0 left-0 bg-opacity-50" onClick={winMessage}>
         Win round (dev button)
       </button>
-      {(wordToGuess && gameWinner === "") && ( // !wordToGuess' only for development
+      {(wordToGuess && gameWinner === "") && (
         <div className="w-full grid place-items-center align-middle h-[95vh] mt-2">
           <h2 className="text-3xl mb-4 text-center justify-center align-middle h-[5vh]">Draw: <b className="font-semibold">{wordToGuess}</b></h2>
           <div
