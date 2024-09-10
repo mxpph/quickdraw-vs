@@ -137,6 +137,8 @@ async def pubsub_loop(websocket: WebSocket, pubsub: redis.client.PubSub):
             if message and message["type"] == "message":
                 # Broadcast back to all clients
                 await websocket.send_text(message["data"])
+                if json.loads(message["data"])["type"] == "game_over":
+                    await websocket.close()
             await asyncio.sleep(0.001) # be nice to the system :)
 
     except redis.PubSubError as e:
