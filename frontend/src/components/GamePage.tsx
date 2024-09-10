@@ -52,6 +52,9 @@ export default function GamePage() {
           case "game_over":
             setGameWinner(data.winner)
             break;
+          case "cancel":
+            setErrorMessage("The host disconnected, the game is cancelled")
+            break;
         }
       } catch (error: any) {
         ws.current?.close();
@@ -61,6 +64,7 @@ export default function GamePage() {
     };
 
     ws.current.onclose = (event) => {
+      console.log("Closed with code", event.code);
       if (event.code != 1000) {
         setErrorMessage(event.reason)
       }
