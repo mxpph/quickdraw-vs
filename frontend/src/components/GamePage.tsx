@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Cookies from "js-cookie";
 import { useState, useEffect, useRef } from "react";
 import WaitingArea from "./WaitingArea";
+import ErrorBar from "./ErrorBar"
 
 const Canvas = dynamic(() => import("./DrawCanvas"), {
   ssr: false,
@@ -13,7 +14,7 @@ const Canvas = dynamic(() => import("./DrawCanvas"), {
 export default function GamePage() {
 
 
-  const [errorShown, setErrorShown] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [hostButtonsShown, setHostButtonsShown] = useState(false);
   const [gameId, setGameId] = useState("")
   const [wordToGuess, setWordToGuess] = useState("");
@@ -37,7 +38,7 @@ export default function GamePage() {
     ws.current = new WebSocket("ws://localhost:3000/ws");
 
     ws.current.onerror = (event) => {
-      setErrorShown(true);
+      setErrorMessage("Connection error. Are you sure you have the right game ID?");
     };
 
     ws.current.onmessage = (event) => {
@@ -54,10 +55,16 @@ export default function GamePage() {
         }
       } catch (error: any) {
         ws.current?.close();
-        setErrorShown(true);
+        setErrorMessage("An unexpected error occurred");
         ws.current = null;
       }
     };
+
+    ws.current.onclose = (event) => {
+      if (event.code != 1000) {
+        setErrorMessage(event.reason)
+      }
+    }
 
     // Clean up WebSocket when the component unmounts
     return () => {
@@ -91,15 +98,10 @@ export default function GamePage() {
 
   return (
     <div className="mx-5">
-      {errorShown && (
-        <div role="alert" className="alert alert-error">
-          <span>
-            Error when connecting to the game server. Are you sure you have the
-            right game ID?
-          </span>
-        </div>
+      {errorMessage && (
+        <ErrorBar error={errorMessage} setError={setErrorMessage}/>
       )}
-      { !errorShown && !wordToGuess &&(
+      {!errorMessage && !wordToGuess &&(
         <WaitingArea hostButtonsShown={hostButtonsShown} gameId={gameId} startGame={startGameMessage} />
       )}
       <button className="btn btn-primary absolute top-0 left-0 bg-opacity-50" onClick={winMessage}>
