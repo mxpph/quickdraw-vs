@@ -99,7 +99,7 @@ export default function GameForm() {
           </div>
         </div>
       )}
-      <div className="flex flex-row flex-wrap gap-4">
+      <div className="flex flex-row flex-wrap justify-center gap-4">
         <form
           id="createForm"
           onSubmit={(e: any) => handleSubmit(e, "create")}
