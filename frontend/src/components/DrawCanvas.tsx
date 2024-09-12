@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect, useImperativeHandle, forwardRef } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { Stage, Layer, Line } from "react-konva";
 import { InferenceSession, Tensor } from "onnxruntime-web";
 import { clear } from "console";
@@ -15,13 +21,16 @@ interface DrawCanvasProps {
 }
 
 let lastDrawn = Date.now();
-const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass, onParentClearCanvas, clearCanvas }) => {
+const DrawCanvas: React.FC<DrawCanvasProps> = ({
+  dataPass,
+  onParentClearCanvas,
+  clearCanvas,
+}) => {
   const [prediction, setPrediction] = useState("?");
   const [lines, setLines] = useState<Point[][]>([]);
   const [confidence, setConfidence] = useState(0);
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
-
 
   const predDebounce = 450;
 
@@ -253,17 +262,18 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({ dataPass, onParentClearCanvas, 
     });
   };
 
-  useEffect(() => { // effect to check if clearCanvas is true
-    console.log("b")
+  useEffect(() => {
+    // effect to check if clearCanvas is true
+    console.log("b");
     if (clearCanvas) {
-      console.log("c")
-      setLines([])
-      onParentClearCanvas() // call the callback function to reset the state in parent component
+      console.log("c");
+      setLines([]);
+      onParentClearCanvas(); // call the callback function to reset the state in parent component
     }
-  }, [clearCanvas, onParentClearCanvas])
+  }, [clearCanvas, onParentClearCanvas]);
 
   const clearDrawing = () => {
-    console.log("d")
+    console.log("d");
     setLines([]);
   };
 

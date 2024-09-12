@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import Cookies from "js-cookie";
-import ErrorBar from "./ErrorBar"
+import ErrorBar from "./ErrorBar";
 
 export default function GameForm() {
   const [createFormData, setCreateFormData] = useState({
@@ -72,9 +72,7 @@ export default function GameForm() {
 
   return (
     <div className="grid gap-4">
-      {error && (
-        <ErrorBar error={error} setError={setError}/>
-      )}
+      {error && <ErrorBar error={error} setError={setError} />}
       <div className="flex flex-row flex-wrap justify-center gap-4">
         <form
           id="createForm"
