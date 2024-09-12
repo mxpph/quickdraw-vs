@@ -8,5 +8,6 @@ https://creativecommons.org/licenses/by/4.0/
 ## How to run
 
 1. Install docker (https://www.docker.com/)
-2. Run `docker-compose up --build`
-3. The project should start at `localhost:3000`
+2. Clone the repository with `git clone https://github.com/mxpph/quickdraw-vs.git`
+3. Run `docker-compose up --build` with any terminal in the project directory
+4. The project should start at `localhost:3000`
