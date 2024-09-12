@@ -144,9 +144,12 @@ export default function GamePage() {
         <div className="w-full grid place-items-center">
           <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-3xl p-48 gap-2 align-middle shadow">
             <p className="text-xl justify-center">Final scores:</p>
-            {scoreboard.map((str, _i) => (
-              <p className="text-lg justify-center">{str}</p>
-            ))}
+            <ol className="list-decimal mb-4">
+              <li className="text-lg animate-bounce">{scoreboard[0]}</li>
+              {scoreboard.slice(1).map((str) => (
+                <li className={"text-lg"}>{str}</li>
+              ))}
+            </ol>
             <Link href="/" className="btn btn-primary mb-4">
               Return home
             </Link>
