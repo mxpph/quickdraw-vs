@@ -53,7 +53,7 @@ try:
                                port=int(os.getenv("REDIS_PORT") or 6379),
                                decode_responses=True)
     logging.info("Redis connection established")
-except Exception as e:
+except redis.ConnectionError as e:
     logging.error("Failed to connect to Redis: %s", e)
     sys.exit(1)
 
@@ -194,12 +194,10 @@ async def websocket_endpoint(websocket: WebSocket):
             # Wait for host to start the game
             if player_data["is_host"]:
                 await receive_start_game(websocket, game_id, game_data)
-            else:
-                action = await pubsub_single(pubsub, f"game:{game_id}:start")
-                if (action == "cancel"):
-                    await websocket.send_text('{"type": "cancel"}')
-                    await websocket.close()
-                    raise WebSocketDisconnect()
+            elif await pubsub_single(pubsub, f"game:{game_id}:start") == "cancel":
+                await websocket.send_text('{"type": "cancel"}')
+                await websocket.close()
+                raise WebSocketDisconnect()
 
             await pubsub.subscribe(f"game:{game_id}:channel")
             if player_data["is_host"]:
@@ -210,8 +208,7 @@ async def websocket_endpoint(websocket: WebSocket):
             )
 
     except WebSocketDisconnect:
-        # TODO Handle what happens if the host disconnects
-        logging.info(f"Client { player_data['name'] } dropped")
+        logging.debug("Client %s dropped", player_data['name'])
         # Delete player details
         await redis_client.delete(f"game:{game_id}:players:{player_id}")
         game_data = await redis_client.get(f"game:{game_id}")
