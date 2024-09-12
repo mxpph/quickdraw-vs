@@ -81,7 +81,11 @@ async def receive_start_game(websocket: WebSocket, game_id: str, game_data: dict
     """
     data = await websocket.receive_json()
     if data.get("type") != "start_game":
-        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
+                                 reason="Unknown message received")
+    if await redis_client.llen(f"game:{game_id}:players") < 2:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
+                                 reason="Not enough players to start the game")
     logging.debug("Got start game message for %s", game_id)
     await redis_client.publish(f"game:{game_id}:start", '{"type": "start"}')
     game_data["status"] = "playing"
@@ -149,7 +153,8 @@ async def websocket_loop(
                     return
                 await send_next_round(game_id, round_no)
             case _:
-                raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+                raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
+                                         reason="Unknown message received")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -225,7 +230,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except redis.PubSubError as e:
         logging.error("Pubsub exception in websocket_endpoint: %s", e)
-        await websocket.close(code=status.WS_1011_INTERNAL_ERROR)
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR,
+                              reason="Internal server error, try again later")
 
 MIN_PLAYERS = 2
 MAX_PLAYERS = 6
