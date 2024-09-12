@@ -88,10 +88,9 @@ async def receive_start_game(websocket: WebSocket, game_id: str, game_data: dict
     await redis_client.set(f"game:{game_id}", json.dumps(game_data))
 
 async def get_scoreboard(game_id: str) -> list[tuple[str, int]]:
-    """Gets the name of the player who has won the game"""
+    """Gets the scoreboard of points for each player of the game"""
     wins = await redis_client.lrange(f"game:{game_id}:wins", 0, -1)
-    wins = util.most_common(wins)
-    return wins
+    return util.most_common(wins)
 
 async def send_next_round(game_id: str, current_round: int):
     """Send the next round message to all clients"""
