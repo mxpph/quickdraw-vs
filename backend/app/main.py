@@ -66,7 +66,7 @@ async def pubsub_single(pubsub: redis.client.PubSub, channel: str):
         while True:
             message = await pubsub.get_message()
             if message and message["type"] == "message":
-                break
+                return json.loads(message["data"])["type"]
             await asyncio.sleep(0.001) # be nice to the system :)
 
         await pubsub.unsubscribe(channel)
@@ -109,6 +109,12 @@ async def send_game_over(game_id: str, winner: str):
                                json.dumps({"type": "game_over",
                                            "winner": winner}))
 
+async def cancel_game(game_id: str):
+    await redis_client.publish(f"game:{game_id}:start",
+                         json.dumps({"type": "cancel"}))
+    await redis_client.delete(f"game:{game_id}:players")
+    await redis_client.delete(f"game:{game_id}")
+
 async def pubsub_loop(websocket: WebSocket, pubsub: redis.client.PubSub):
     """Send back messages received on Pub/sub via the WebSocket"""
     try:
@@ -117,6 +123,9 @@ async def pubsub_loop(websocket: WebSocket, pubsub: redis.client.PubSub):
             if message and message["type"] == "message":
                 # Broadcast back to all clients
                 await websocket.send_text(message["data"])
+                if json.loads(message["data"])["type"] == "game_over":
+                    await websocket.close()
+                    raise WebSocketDisconnect()
             await asyncio.sleep(0.001) # be nice to the system :)
 
     except redis.PubSubError as e:
@@ -186,7 +195,11 @@ async def websocket_endpoint(websocket: WebSocket):
             if player_data["is_host"]:
                 await receive_start_game(websocket, game_id, game_data)
             else:
-                await pubsub_single(pubsub, f"game:{game_id}:start")
+                action = await pubsub_single(pubsub, f"game:{game_id}:start")
+                if (action == "cancel"):
+                    await websocket.send_text('{"type": "cancel"}')
+                    await websocket.close()
+                    raise WebSocketDisconnect()
 
             await pubsub.subscribe(f"game:{game_id}:channel")
             if player_data["is_host"]:
@@ -198,8 +211,18 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         # TODO Handle what happens if the host disconnects
-        logging.info("Client %s dropped", player_id)
+        logging.info(f"Client { player_data['name'] } dropped")
+        # Delete player details
+        await redis_client.delete(f"game:{game_id}:players:{player_id}")
+        game_data = await redis_client.get(f"game:{game_id}")
+        game_status = json.loads(game_data)["status"] if game_data else None
+        # If the host disconnects before the game starts, we just cancel
+        # the game.
+        if player_data["is_host"] and game_status == "waiting":
+            await cancel_game(game_id)
+            return
         await redis_client.lrem(f"game:{game_id}:players", -1, player_id)
+        # Delete game_id if the lobby is now empty
         if await redis_client.llen(f"game:{game_id}:players") == 0:
             logging.debug("Game %s is empty, deleting", game_id)
             await redis_client.delete(f"game:{game_id}:players")

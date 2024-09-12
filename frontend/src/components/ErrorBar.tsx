@@ -1,0 +1,39 @@
+import React, { useEffect } from "react";
+
+interface ErrorBarProps {
+  error: string;
+  setError: (value: string) => void;
+}
+
+const ErrorBar: React.FC<ErrorBarProps> = ({ error, setError }) => {
+  return (
+    <div role="alert" className="alert alert-error">
+      <span>Error: {error}</span>
+      <div className="w-full flex flex-row justify-end">
+        <button
+          className="btn btn-sm btn-circle btn-outline"
+          onClick={() => {
+            setError("");
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ErrorBar;
