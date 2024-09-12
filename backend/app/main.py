@@ -66,10 +66,10 @@ async def pubsub_single(pubsub: redis.client.PubSub, channel: str):
         while True:
             message = await pubsub.get_message()
             if message and message["type"] == "message":
+                await pubsub.unsubscribe(channel)
                 return json.loads(message["data"])["type"]
             await asyncio.sleep(0.001) # be nice to the system :)
 
-        await pubsub.unsubscribe(channel)
     except redis.PubSubError as e:
         logging.error("Exception in pubsub_single: %s", e)
 
@@ -83,17 +83,15 @@ async def receive_start_game(websocket: WebSocket, game_id: str, game_data: dict
     if data.get("type") != "start_game":
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
     logging.debug("Got start game message for %s", game_id)
-    await redis_client.publish(f"game:{game_id}:start", "start")
+    await redis_client.publish(f"game:{game_id}:start", '{"type": "start"}')
     game_data["status"] = "playing"
     await redis_client.set(f"game:{game_id}", json.dumps(game_data))
 
-async def get_winner_name(game_id: str) -> str:
+async def get_scoreboard(game_id: str) -> list[tuple[str, int]]:
     """Gets the name of the player who has won the game"""
     wins = await redis_client.lrange(f"game:{game_id}:wins", 0, -1)
-    winner_id = util.most_common(wins)
-    winner_data = await redis_client.get(f"game:{game_id}:players:{winner_id}")
-    winner_data = json.loads(winner_data)
-    return winner_data["name"]
+    wins = util.most_common(wins)
+    return wins
 
 async def send_next_round(game_id: str, current_round: int):
     """Send the next round message to all clients"""
@@ -103,11 +101,11 @@ async def send_next_round(game_id: str, current_round: int):
                                            "round": current_round + 1,
                                            "word": word}))
 
-async def send_game_over(game_id: str, winner: str):
+async def send_game_over(game_id: str, scoreboard: list[tuple[str, int]]):
     """Send the game over message to all clients"""
     await redis_client.publish(f"game:{game_id}:channel",
                                json.dumps({"type": "game_over",
-                                           "winner": winner}))
+                                           "scoreboard": scoreboard}))
 
 async def cancel_game(game_id: str):
     await redis_client.publish(f"game:{game_id}:start",
@@ -145,10 +143,10 @@ async def websocket_loop(
         match data.get("type"):
             case "win":
                 logging.debug("Got win message from \'%s\'", player_data['name'])
-                round_no = await redis_client.rpush(f"game:{game_id}:wins", player_id)
+                round_no = await redis_client.rpush(f"game:{game_id}:wins", player_data['name'])
                 if round_no == game_data["rounds"]:
-                    winner_name = await get_winner_name(game_id)
-                    await send_game_over(game_id, winner_name)
+                    scoreboard = await get_scoreboard(game_id)
+                    await send_game_over(game_id, scoreboard)
                     return
                 await send_next_round(game_id, round_no)
             case _:
@@ -209,6 +207,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         logging.debug("Client %s dropped", player_data['name'])
+        await util.random_sleep(0.1) # sleep for up to 0.1s to stagger many requests at once
         # Delete player details
         await redis_client.delete(f"game:{game_id}:players:{player_id}")
         game_data = await redis_client.get(f"game:{game_id}")

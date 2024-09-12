@@ -1,5 +1,4 @@
 "use client";
-import { error } from "console";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import Cookies from "js-cookie";
@@ -17,7 +16,7 @@ export default function GamePage() {
   const [gameId, setGameId] = useState("");
   const [wordToGuess, setWordToGuess] = useState("");
   const [clearCanvas, setClearCanvas] = useState(false);
-  const [gameWinner, setGameWinner] = useState("");
+  const [scoreboard, setScoreboard] = useState<string[]>([]);
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -26,9 +25,17 @@ export default function GamePage() {
     setHostButtonsShown(
       sessionStorage.getItem("quickdrawvs_is_host") === "True"
     );
-    setGameWinner("");
+    setScoreboard([]);
     setGameId(Cookies.get("quickdrawvs_game_id") as string);
   }, []); // Adding an empty dependency array to ensure this runs only once on mount
+
+  const handle_scoreboard = (scoreboardData: Array<[string, number]>) => {
+    var tempScoreboard: string[] = [];
+    for (var [player, score] of scoreboardData) {
+      tempScoreboard.push(`${player}: ${score} point${score > 1 ? "s" : ""}`);
+    }
+    setScoreboard(tempScoreboard);
+  };
 
   useEffect(() => {
     // Initialize WebSocket and store it in the ref
@@ -49,7 +56,7 @@ export default function GamePage() {
             handleClearCanvas();
             break;
           case "game_over":
-            setGameWinner(data.winner);
+            handle_scoreboard(data.scoreboard);
             break;
           case "cancel":
             setErrorMessage("The host disconnected, the game is cancelled");
@@ -116,7 +123,7 @@ export default function GamePage() {
       >
         Win round (dev button)
       </button>
-      {wordToGuess && gameWinner === "" && (
+      {wordToGuess && scoreboard.length === 0 && (
         <div className="w-full grid place-items-center align-middle h-[95vh] mt-2">
           <h2 className="text-3xl mb-4 text-center justify-center align-middle h-[5vh]">
             Draw: <b className="font-semibold">{wordToGuess}</b>
@@ -133,16 +140,14 @@ export default function GamePage() {
           </div>
         </div>
       )}
-      {gameWinner !== "" && (
+      {scoreboard.length > 0 && (
         <div className="w-full grid place-items-center">
           <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-3xl p-48 gap-2 align-middle shadow">
-            <p className="text-xl">THE WINNER IS</p>
-            <b className="text-xl font-bold mb-4">{gameWinner}!</b>
-            <Link
-              href="/"
-              className="btn btn-primary"
-              onClick={startGameMessage}
-            >
+            <p className="text-xl justify-center">Final scores:</p>
+            {scoreboard.map((str, _i) => (
+              <p className="text-lg justify-center">{str}</p>
+            ))}
+            <Link href="/" className="btn btn-primary mb-4">
               Return home
             </Link>
           </div>
