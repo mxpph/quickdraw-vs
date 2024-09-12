@@ -1,25 +1,23 @@
 "use client";
 import { error } from "console";
-import Link from "next/link"
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import Cookies from "js-cookie";
 import { useState, useEffect, useRef } from "react";
 import WaitingArea from "./WaitingArea";
-import ErrorBar from "./ErrorBar"
+import ErrorBar from "./ErrorBar";
 
 const Canvas = dynamic(() => import("./DrawCanvas"), {
   ssr: false,
 });
 
 export default function GamePage() {
-
-
   const [errorMessage, setErrorMessage] = useState("");
   const [hostButtonsShown, setHostButtonsShown] = useState(false);
-  const [gameId, setGameId] = useState("")
+  const [gameId, setGameId] = useState("");
   const [wordToGuess, setWordToGuess] = useState("");
   const [clearCanvas, setClearCanvas] = useState(false);
-  const [gameWinner, setGameWinner] = useState("")
+  const [gameWinner, setGameWinner] = useState("");
 
   const ws = useRef<WebSocket | null>(null);
 
@@ -28,9 +26,8 @@ export default function GamePage() {
     setHostButtonsShown(
       sessionStorage.getItem("quickdrawvs_is_host") === "True"
     );
-    setGameWinner("")
-    setGameId( Cookies.get("quickdrawvs_game_id") as string )
-
+    setGameWinner("");
+    setGameId(Cookies.get("quickdrawvs_game_id") as string);
   }, []); // Adding an empty dependency array to ensure this runs only once on mount
 
   useEffect(() => {
@@ -38,7 +35,9 @@ export default function GamePage() {
     ws.current = new WebSocket("ws://localhost:3000/ws");
 
     ws.current.onerror = (event) => {
-      setErrorMessage("Connection error. Are you sure you have the right game ID?");
+      setErrorMessage(
+        "Connection error. Are you sure you have the right game ID?"
+      );
     };
 
     ws.current.onmessage = (event) => {
@@ -47,13 +46,13 @@ export default function GamePage() {
         switch (data.type) {
           case "next_round":
             setWordToGuess(data.word);
-            handleClearCanvas()
+            handleClearCanvas();
             break;
           case "game_over":
-            setGameWinner(data.winner)
+            setGameWinner(data.winner);
             break;
           case "cancel":
-            setErrorMessage("The host disconnected, the game is cancelled")
+            setErrorMessage("The host disconnected, the game is cancelled");
             break;
         }
       } catch (error: any) {
@@ -66,9 +65,9 @@ export default function GamePage() {
     ws.current.onclose = (event) => {
       console.log("Closed with code", event.code);
       if (event.code != 1000) {
-        setErrorMessage(event.reason)
+        setErrorMessage(event.reason);
       }
-    }
+    };
 
     // Clean up WebSocket when the component unmounts
     return () => {
@@ -99,37 +98,53 @@ export default function GamePage() {
     setClearCanvas(false);
   };
 
-
   return (
     <div className="mx-5">
       {errorMessage && (
-        <ErrorBar error={errorMessage} setError={setErrorMessage}/>
+        <ErrorBar error={errorMessage} setError={setErrorMessage} />
       )}
-      {!errorMessage && !wordToGuess &&(
-        <WaitingArea hostButtonsShown={hostButtonsShown} gameId={gameId} startGame={startGameMessage} />
+      {!errorMessage && !wordToGuess && (
+        <WaitingArea
+          hostButtonsShown={hostButtonsShown}
+          gameId={gameId}
+          startGame={startGameMessage}
+        />
       )}
-      <button className="btn btn-primary absolute top-0 left-0 bg-opacity-50" onClick={winMessage}>
+      <button
+        className="btn btn-primary absolute top-0 left-0 bg-opacity-50"
+        onClick={winMessage}
+      >
         Win round (dev button)
       </button>
-      {(wordToGuess && gameWinner === "") && (
+      {wordToGuess && gameWinner === "" && (
         <div className="w-full grid place-items-center align-middle h-[95vh] mt-2">
-          <h2 className="text-3xl mb-4 text-center justify-center align-middle h-[5vh]">Draw: <b className="font-semibold">{wordToGuess}</b></h2>
+          <h2 className="text-3xl mb-4 text-center justify-center align-middle h-[5vh]">
+            Draw: <b className="font-semibold">{wordToGuess}</b>
+          </h2>
           <div
             className="outline outline-2 outline-offset-2 outline-primary rounded-xl overflow-hidden w-[90vw] h-full shadow-xl grid place-items-center"
             id="canvasdiv"
           >
-            <Canvas dataPass={handlePredictionData} onParentClearCanvas={onClearCanvas} clearCanvas={clearCanvas} />
+            <Canvas
+              dataPass={handlePredictionData}
+              onParentClearCanvas={onClearCanvas}
+              clearCanvas={clearCanvas}
+            />
           </div>
         </div>
       )}
       {gameWinner !== "" && (
         <div className="w-full grid place-items-center">
           <div className="mt-10 rounded-2xl bg-neutral-50 grid place-items-center w-full max-w-3xl p-48 gap-2 align-middle shadow">
-              <p className="text-xl">THE WINNER IS</p>
-              <b className="text-xl font-bold mb-4">{gameWinner}!</b>
-              <Link href="/" className="btn btn-primary" onClick={startGameMessage}>
-                Return home
-              </Link>
+            <p className="text-xl">THE WINNER IS</p>
+            <b className="text-xl font-bold mb-4">{gameWinner}!</b>
+            <Link
+              href="/"
+              className="btn btn-primary"
+              onClick={startGameMessage}
+            >
+              Return home
+            </Link>
           </div>
         </div>
       )}
