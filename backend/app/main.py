@@ -240,6 +240,7 @@ MIN_PLAYERS = 2
 MAX_PLAYERS = 6
 MIN_ROUNDS = 2
 MAX_ROUNDS = 10
+MAX_LEN_PLAYER_NAME = 16
 
 async def check_too_many_players(game_id: str) -> bool:
     """
@@ -306,6 +307,10 @@ async def create_game(data: CreateGameData):
                 or rounds < MIN_ROUNDS or rounds > MAX_ROUNDS):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Invalid rounds or max players")
+
+        if len(data.player_name) > MAX_LEN_PLAYER_NAME:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Player name too long")
 
         game_id = str(uuid.uuid4())
         game_data = {
