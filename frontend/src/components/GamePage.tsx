@@ -146,8 +146,8 @@ export default function GamePage() {
             <p className="text-xl justify-center">Final scores:</p>
             <ol className="list-decimal mb-4">
               <li className="text-lg animate-bounce">{scoreboard[0]}</li>
-              {scoreboard.slice(1).map((str) => (
-                <li className={"text-lg"}>{str}</li>
+              {scoreboard.slice(1).map((str,i) => (
+                <li key={i} className={"text-lg"}>{str}</li>
               ))}
             </ol>
             <Link href="/" className="btn btn-primary mb-4">
