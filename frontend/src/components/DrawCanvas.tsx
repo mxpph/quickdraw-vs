@@ -32,7 +32,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
 
-  const predDebounce = 450;
+  const predDebounce = 750;
 
   const modelCategories = [
     "apple",
@@ -222,7 +222,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
   const handleRasterize = () => {
     const normalizedStrokes = normalizeStrokes(lines);
     const rasterArray = rasterizeStrokes(normalizedStrokes);
-    console.log("Rasterized array:", rasterArray);
+    return rasterArray;
   };
 
   const handleExportToSVG = () => {
@@ -240,8 +240,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
     const svgContent = svgHeader + svgPaths + svgFooter;
 
-    // Log SVG content to the console
-    console.log("SVG Content:", svgContent);
+    return svgContent;
   };
 
   const handleEvaluate = () => {
@@ -264,16 +263,13 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
   useEffect(() => {
     // effect to check if clearCanvas is true
-    console.log("b");
     if (clearCanvas) {
-      console.log("c");
       setLines([]);
       onParentClearCanvas(); // call the callback function to reset the state in parent component
     }
   }, [clearCanvas, onParentClearCanvas]);
 
   const clearDrawing = () => {
-    console.log("d");
     setLines([]);
   };
 
@@ -281,8 +277,8 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     <div>
       <div className="grid grid-cols-3 place-items-center">
         <div className="grid place-items-center">
-          <p className="text-xl font-semibold">PREDICTION: {prediction}</p>
-          {confidence > 70 ? (
+          <p className="text-xl font-semibold">I guess... {prediction}!</p>
+          {/* confidence > 70 ? (
             <p className="text-lg font-medium text-green-400">
               Confidence (dev): {confidence + "%"}
             </p>
@@ -290,7 +286,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
             <p className="text-lg font-medium">
               Confidence (dev): {confidence + "%"}
             </p>
-          )}
+          )*/}
         </div>
         <button
           className="btn col-span-1 mt-1 btn-primary btn-outline"

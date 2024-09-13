@@ -117,12 +117,12 @@ export default function GamePage() {
           startGame={startGameMessage}
         />
       )}
-      <button
+      {/* {<button
         className="btn btn-primary absolute top-0 left-0 bg-opacity-50"
         onClick={winMessage}
       >
         Win round (dev button)
-      </button>
+      </button>} */}
       {wordToGuess && scoreboard.length === 0 && (
         <div className="w-full grid place-items-center align-middle h-[95vh] mt-2">
           <h2 className="text-3xl mb-4 text-center justify-center align-middle h-[5vh]">
@@ -146,8 +146,10 @@ export default function GamePage() {
             <p className="text-xl justify-center">Final scores:</p>
             <ol className="list-decimal mb-4">
               <li className="text-lg animate-bounce">{scoreboard[0]}</li>
-              {scoreboard.slice(1).map((str,i) => (
-                <li key={i} className={"text-lg"}>{str}</li>
+              {scoreboard.slice(1).map((str, i) => (
+                <li key={i} className={"text-lg"}>
+                  {str}
+                </li>
               ))}
             </ol>
             <Link href="/" className="btn btn-primary mb-4">
