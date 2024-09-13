@@ -20,7 +20,12 @@ from pydantic import BaseModel
 
 from app.util import util
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(
+     filename="app.log",
+     level=logging.INFO,
+     format= "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+     datefmt="%H:%M:%S"
+)
 
 class CreateGameData(BaseModel):
     """Required data for create-game HTTP request"""
