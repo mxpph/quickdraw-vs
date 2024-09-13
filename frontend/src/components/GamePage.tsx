@@ -147,7 +147,7 @@ export default function GamePage() {
             <ol className="list-decimal mb-4">
               <li className="text-lg animate-bounce">{scoreboard[0]}</li>
               {scoreboard.slice(1).map((str) => (
-                <li className={"text-lg"}>{str}</li>
+                <li key={str} className={"text-lg"}>{str}</li>
               ))}
             </ol>
             <Link href="/" className="btn btn-primary mb-4">
