@@ -37,6 +37,9 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "http://quickdraw-vs.com",
+    "http://www.quickdraw-vs.com",
+    "app"
 ]
 
 app.add_middleware(
