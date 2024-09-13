@@ -11,4 +11,4 @@ COPY ./backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade -r ./requirements.txt
 COPY ./backend/app ./app
 COPY --from=build_frontend /out ./out
-CMD ["fastapi", "run", "app/main.py", "--port", "3000"]
+CMD ["fastapi", "run", "app/main.py", "--workers", "2", "--port", "3000"]
