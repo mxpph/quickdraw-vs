@@ -22,7 +22,7 @@ from app.util import util
 
 logging.basicConfig(
      filename="app.log",
-     level=logging.DEBUG,
+     level=logging.INFO,
      format= "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
      datefmt="%H:%M:%S"
 )
@@ -197,7 +197,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # All is okay, so accept the connection.
     await websocket.accept()
-    logging.info("Websocket connection accepted for %s", player_id)
+    logging.debug("Websocket connection accepted for %s", player_id)
 
     try:
         async with redis_client.pubsub(ignore_subscribe_messages=True) as pubsub:
