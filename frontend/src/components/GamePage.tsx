@@ -39,7 +39,7 @@ export default function GamePage() {
 
   useEffect(() => {
     // Initialize WebSocket and store it in the ref
-    ws.current = new WebSocket("ws://localhost:3000/ws");
+    ws.current = new WebSocket(`ws://${window.location.host}/ws/`);
 
     ws.current.onerror = (event) => {
       setErrorMessage(

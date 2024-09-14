@@ -22,7 +22,7 @@ from app.util import util
 
 logging.basicConfig(
      filename="app.log",
-     level=logging.INFO,
+     level=logging.DEBUG,
      format= "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
      datefmt="%H:%M:%S"
 )
@@ -41,7 +41,7 @@ class JoinGameData(BaseModel):
 app = FastAPI()
 
 origins = [
-    "http://localhost:3000",
+    "http://localhost",
     "http://quickdraw-vs.com",
     "http://www.quickdraw-vs.com",
     "app"
@@ -164,7 +164,7 @@ async def websocket_loop(
                 raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
                                          reason="Unknown message received")
 
-@app.websocket("/ws")
+@app.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     """Handle incoming websocket connections"""
     if not redis_client:
@@ -262,7 +262,7 @@ async def insert_player(game_id: str, player_id: str, player_data: dict):
     await redis_client.set(f"game:{game_id}:players:{player_id}", json.dumps(player_data))
     logging.info("Created new player with ID: %s", player_id)
 
-@app.post("/join-game")
+@app.post("/join-game/")
 async def join_game(data: JoinGameData):
     """Handle a POST request to join an existing game"""
     if not redis_client:
@@ -294,7 +294,7 @@ async def join_game(data: JoinGameData):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Internal server error") from e
 
-@app.post("/create-game")
+@app.post("/create-game/")
 async def create_game(data: CreateGameData):
     """Handle a POST request to create a new game"""
     if not redis_client:
@@ -343,5 +343,5 @@ async def create_game(data: CreateGameData):
 
 # These have to come after or the endpoints are overriden and incorrectly
 # routed.
-NEXT_DIR = "/quickdraw/out"
-app.mount("/", StaticFiles(directory=NEXT_DIR, html = True), name="static")
+# NEXT_DIR = "/quickdraw/out"
+# app.mount("/", StaticFiles(directory=NEXT_DIR, html = True), name="static")
