@@ -36,10 +36,10 @@ export default function GameForm() {
     var url;
     var formData;
     if (form === "join") {
-      url = "/join-game";
+      url = "/api/join-game/";
       formData = joinFormData;
     } else {
-      url = "/create-game";
+      url = "/api/create-game/";
       formData = createFormData;
     }
     try {

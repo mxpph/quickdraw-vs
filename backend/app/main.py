@@ -20,7 +20,12 @@ from pydantic import BaseModel
 
 from app.util import util
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(
+     filename="app.log",
+     level=logging.INFO,
+     format= "[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
+     datefmt="%H:%M:%S"
+)
 
 class CreateGameData(BaseModel):
     """Required data for create-game HTTP request"""
@@ -36,7 +41,10 @@ class JoinGameData(BaseModel):
 app = FastAPI()
 
 origins = [
-    "http://localhost:3000",
+    "http://localhost",
+    "http://quickdraw-vs.com",
+    "http://www.quickdraw-vs.com",
+    "app"
 ]
 
 app.add_middleware(
@@ -156,7 +164,7 @@ async def websocket_loop(
                 raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
                                          reason="Unknown message received")
 
-@app.websocket("/ws")
+@app.websocket("/ws/")
 async def websocket_endpoint(websocket: WebSocket):
     """Handle incoming websocket connections"""
     if not redis_client:
@@ -189,7 +197,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     # All is okay, so accept the connection.
     await websocket.accept()
-    logging.info("Websocket connection accepted for %s", player_id)
+    logging.debug("Websocket connection accepted for %s", player_id)
 
     try:
         async with redis_client.pubsub(ignore_subscribe_messages=True) as pubsub:
@@ -237,6 +245,7 @@ MIN_PLAYERS = 2
 MAX_PLAYERS = 6
 MIN_ROUNDS = 2
 MAX_ROUNDS = 10
+MAX_LEN_PLAYER_NAME = 16
 
 async def check_too_many_players(game_id: str) -> bool:
     """
@@ -253,7 +262,7 @@ async def insert_player(game_id: str, player_id: str, player_data: dict):
     await redis_client.set(f"game:{game_id}:players:{player_id}", json.dumps(player_data))
     logging.info("Created new player with ID: %s", player_id)
 
-@app.post("/join-game")
+@app.post("/join-game/")
 async def join_game(data: JoinGameData):
     """Handle a POST request to join an existing game"""
     if not redis_client:
@@ -285,7 +294,7 @@ async def join_game(data: JoinGameData):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Internal server error") from e
 
-@app.post("/create-game")
+@app.post("/create-game/")
 async def create_game(data: CreateGameData):
     """Handle a POST request to create a new game"""
     if not redis_client:
@@ -303,6 +312,10 @@ async def create_game(data: CreateGameData):
                 or rounds < MIN_ROUNDS or rounds > MAX_ROUNDS):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Invalid rounds or max players")
+
+        if len(data.player_name) > MAX_LEN_PLAYER_NAME:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Player name too long")
 
         game_id = str(uuid.uuid4())
         game_data = {
@@ -330,5 +343,5 @@ async def create_game(data: CreateGameData):
 
 # These have to come after or the endpoints are overriden and incorrectly
 # routed.
-NEXT_DIR = "/quickdraw/out"
-app.mount("/", StaticFiles(directory=NEXT_DIR, html = True), name="static")
+# NEXT_DIR = "/quickdraw/out"
+# app.mount("/", StaticFiles(directory=NEXT_DIR, html = True), name="static")
