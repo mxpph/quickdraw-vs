@@ -179,7 +179,7 @@ async def websocket_endpoint(websocket: WebSocket):
         logging.debug("ws: No game information cookie")
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
-    if not util.is_valid_uuid(game_id) or not util.is_valid_uuid(player_id):
+    if not util.is_valid_game_id(game_id) or not util.is_valid_uuid(player_id):
         logging.debug("ws: Invalid game information cookie")
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
@@ -271,7 +271,7 @@ async def join_game(data: JoinGameData):
                             detail="Internal database error")
     try:
         game_id = data.game_id
-        if (    game_id is None or game_id == "" or not util.is_valid_uuid(game_id)
+        if (    game_id is None or game_id == "" or not util.is_valid_game_id(game_id)
                 or await redis_client.get(f"game:{game_id}") is None):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Invalid game ID")
@@ -317,7 +317,7 @@ async def create_game(data: CreateGameData):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Player name too long")
 
-        game_id = str(uuid.uuid4())
+        game_id = util.random_string()
         game_data = {
             "status": "waiting",
             "max_players": max_players,
