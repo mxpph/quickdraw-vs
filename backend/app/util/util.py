@@ -1,8 +1,9 @@
 """Helper functions for the main module"""
 import uuid
 from asyncio import sleep
-from random import choice, random
+from random import choice, random, choices
 from collections import Counter
+import string
 
 def is_valid_uuid(uuid_string: str) -> bool:
     """Return true if the uuid_string given is valid"""
@@ -44,3 +45,9 @@ def most_common(lst: list[str]) -> list[tuple[str, int]]:
 
 async def random_sleep(time: float):
     await sleep(time * random())
+
+def random_string() -> str:
+    return ''.join(choices(string.ascii_lowercase + string.digits, k=5))
+
+def is_valid_game_id(game_id: str) -> bool:
+    return len(game_id) == 5 and game_id.isalnum()

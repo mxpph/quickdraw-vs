@@ -145,7 +145,7 @@ export default function GameForm() {
               type="text"
               className="input input-bordered input-primary w-full max-w-xs"
               name="game_id"
-              maxLength={36}
+              maxLength={5}
               onChange={handleJoinFormChange}
               required
             />
