@@ -9,6 +9,21 @@ import { Stage, Layer, Line } from "react-konva";
 import { InferenceSession, Tensor } from "onnxruntime-web";
 import { clear } from "console";
 
+interface AnimateProps {
+  children: React.ReactNode;
+  on: string | undefined;
+}
+
+function AnimateText({ children, on }: AnimateProps) {
+  return on === undefined ? (
+    <p>{children}</p>
+  ) : (
+    <p className="text-xl font-semibold animate-color-fade" key={on}>
+      {children}
+    </p>
+  );
+}
+
 interface Point {
   x: number;
   y: number;
@@ -79,8 +94,10 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
     const stage = e.target.getStage();
     const point = stage.getPointerPosition();
-    const lastLine = lines[lines.length - 1].concat([point]);
-    setLines(lines.slice(0, -1).concat([lastLine]));
+    if (lines[lines.length - 1] !== undefined) {
+      const lastLine = lines[lines.length - 1].concat([point]);
+      setLines(lines.slice(0, -1).concat([lastLine]));
+    }
 
     if (Date.now() - lastDrawn > predDebounce) {
       // console.log("Evaluating drawing now");
@@ -277,7 +294,11 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     <div>
       <div className="grid grid-cols-3 place-items-center">
         <div className="grid place-items-center">
-          <p className="text-xl font-semibold">I guess... {prediction}!</p>
+          {prediction && (
+            <AnimateText on={prediction}>
+              I guess... {confidence > 70 ? prediction : "not sure"}!
+            </AnimateText>
+          )}
           {/* confidence > 70 ? (
             <p className="text-lg font-medium text-green-400">
               Confidence (dev): {confidence + "%"}

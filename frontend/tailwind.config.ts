@@ -7,6 +7,17 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    extend: {
+      keyframes: {
+        "color-fade": {
+          "0%": { "color": "red" },
+          "100%": { "color": "black" },
+        }
+      },
+      animation: {
+        "color-fade": "color-fade 0.75s ease-out",
+      }
+    }
   },
   plugins: [
     require('daisyui'),
