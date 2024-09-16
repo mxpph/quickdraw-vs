@@ -15,7 +15,6 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.util import util
@@ -82,8 +81,9 @@ async def pubsub_single(pubsub: redis.client.PubSub, channel: str):
         logging.error("Exception in pubsub_single: %s", e)
 
 async def wait_pubsub_subscribe(channel: str, subs: int):
+    """Wait for subs number of players to subscribe to channel"""
     while True:
-        if await redis_client.pubsub_numsub(channel)[0][1] >= subs:
+        if (await redis_client.pubsub_numsub(channel))[0][1] >= subs:
             return
         await asyncio.sleep(0.01)
 
@@ -102,7 +102,7 @@ async def receive_start_game(websocket: WebSocket, game_id: str, game_data: dict
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION,
                                  reason="Not enough players to start the game")
     logging.debug("Got start game message for %s", game_id)
-    subs = await redis_client.pubsub_numsub(f"game:{game_id}:start")[0][1]
+    subs = (await redis_client.pubsub_numsub(f"game:{game_id}:start"))[0][1]
     await redis_client.publish(f"game:{game_id}:start", '{"type": "start"}')
     game_data["status"] = "playing"
     await redis_client.set(f"game:{game_id}", json.dumps(game_data))
@@ -152,7 +152,6 @@ async def pubsub_loop(websocket: WebSocket, pubsub: redis.client.PubSub):
 async def websocket_loop(
     websocket: WebSocket,
     game_id: str,
-    player_id: str,
     game_data: dict,
     player_data: dict
 ):
@@ -220,6 +219,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
             await pubsub.subscribe(f"game:{game_id}:channel")
             if player_data["is_host"]:
+                logging.debug("Waiting for %s players to subscribe to %s channel", subs, game_id)
                 await wait_pubsub_subscribe(f"game:{game_id}:channel", subs)
                 await send_next_round(game_id, 0)
             await asyncio.gather(
