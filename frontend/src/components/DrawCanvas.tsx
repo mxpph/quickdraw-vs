@@ -50,28 +50,29 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
   const predDebounce = 750;
 
   const modelCategories = [
-    "apple",
-    "anvil",
-    "dresser",
-    "broom",
-    "hat",
-    "camera",
-    "dog",
-    "basketball",
-    "pencil",
-    "hammer",
-    "hexagon",
-    "banana",
-    "angel",
-    "airplane",
-    "ant",
-    "paper clip",
+    'airplane',
+    'angel',
+    'ant',
+    'anvil',
+    'apple',
+    'banana',
+    'basketball',
+    'broom',
+    'camera',
+    'dog',
+    'dresser',
+    'hammer',
+    'hat',
+    'hexagon',
+    'paper clip',
+    'pencil'
   ];
+
 
   useEffect(() => {
     (async () => {
       try {
-        session.current = await InferenceSession.create("model3_4_large.onnx");
+        session.current = await InferenceSession.create("CNN_cat16_v6-0_large_gputrain.onnx");
       } catch (error) {
         // TODO: Handle this error properly
         console.error("Failed to load model", error);
@@ -201,6 +202,23 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
       rasterImage[i / 4] = imageData.data[i]; // Invert colors (black on white background)
     }
 
+    // const rasterImage: number[][][][] = new Array(1).fill(null).map(() =>
+    //   new Array(1).fill(null).map(() =>
+    //     new Array(side).fill(null).map(() =>
+    //       new Array(side).fill(0)
+    //     )
+    //   )
+    // );
+    
+    // for (let y = 0; y < side; y++) {
+    //   for (let x = 0; x < side; x++) {
+    //     const i = (y * side + x) * 4;
+    //     rasterImage[0][0][y][x] = imageData.data[i] / 255; // Normalize to 0-1
+    //   }
+    // }
+
+    
+
     return rasterImage;
   };
 
@@ -213,7 +231,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
   const argMax = (arr: Float32Array): number => arr.indexOf(Math.max(...arr));
 
-  async function ONNX(input: any) {
+  async function ONNX(input: number[]) {
     if (session.current === null) {
       console.error(
         "Attempted to run inference while InferenceSession is null"
@@ -221,7 +239,10 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
       return;
     }
     try {
-      const tensor = new Tensor("float32", new Float32Array(input), [1, 784]);
+      const flattenedInput = input.flat(3);
+      const tensor = new Tensor("float32", new Float32Array(flattenedInput), [1, 1, 28, 28]);
+
+      // const tensor = new Tensor("float32", new Float32Array(input), [1, 784]);
 
       const inputMap = { input: tensor };
 

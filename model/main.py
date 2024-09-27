@@ -275,8 +275,9 @@ values_dict = {}
 
 datapath = os.path.join(os.getcwd(), "model", "trainingdata")
 trianing_data_names = [f for f in listdir(datapath) if isfile(join(datapath, f))]
+print(f"Item Order {trianing_data_names}")
 items = len(trianing_data_names) # Number of items
-print(f"Items: {items}")
+print(f"Item Count: {items}")
 
 labels = trianing_data_names
 
