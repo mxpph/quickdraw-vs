@@ -35,7 +35,6 @@ interface DrawCanvasProps {
   clearCanvas: boolean;
 }
 
-let lastDrawn = Date.now();
 const DrawCanvas: React.FC<DrawCanvasProps> = ({
   dataPass,
   onParentClearCanvas,
@@ -47,7 +46,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
 
-  const predDebounce = 750;
+  const predDebounce = 400;
 
   const modelCategories = [
     'airplane',
@@ -79,7 +78,10 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
       }
     })();
 
+    let evalTimer = setTimeout(handleEvaluate,predDebounce);
+
     return () => {
+      clearTimeout(evalTimer)
       session.current?.release();
     };
   }, []);
@@ -98,12 +100,6 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     if (lines[lines.length - 1] !== undefined) {
       const lastLine = lines[lines.length - 1].concat([point]);
       setLines(lines.slice(0, -1).concat([lastLine]));
-    }
-
-    if (Date.now() - lastDrawn > predDebounce) {
-      // console.log("Evaluating drawing now");
-      lastDrawn = Date.now();
-      handleEvaluate();
     }
   };
 
