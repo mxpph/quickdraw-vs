@@ -8,6 +8,7 @@ import React, {
 import { Stage, Layer, Line } from "react-konva";
 import { InferenceSession, Tensor } from "onnxruntime-web";
 import { clear } from "console";
+import { clearInterval } from "timers";
 
 interface AnimateProps {
   children: React.ReactNode;
@@ -69,19 +70,20 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
 
   useEffect(() => {
+    var evalTimer : NodeJS.Timeout
     (async () => {
       try {
         session.current = await InferenceSession.create("CNN_cat16_v6-0_large_gputrain.onnx");
+        evalTimer = setInterval(handleEvaluate,predDebounce);
+        console.log("evaltimer!",evalTimer)
       } catch (error) {
         // TODO: Handle this error properly
         console.error("Failed to load model", error);
       }
     })();
 
-    let evalTimer = setTimeout(handleEvaluate,predDebounce);
-
     return () => {
-      clearTimeout(evalTimer)
+      clearInterval(evalTimer)
       session.current?.release();
     };
   }, []);
@@ -291,7 +293,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
       setConfidence(probPercent);
       if (probPercent > 70) {
         dataPass(prediction);
-      }
+      } 
     });
   };
 
