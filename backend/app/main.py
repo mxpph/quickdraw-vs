@@ -82,10 +82,17 @@ async def pubsub_single(pubsub: redis.client.PubSub, channel: str):
 
 async def wait_pubsub_subscribe(channel: str, subs: int):
     """Wait for subs number of players to subscribe to channel"""
-    while True:
-        if (await redis_client.pubsub_numsub(channel))[0][1] >= subs:
-            return
-        await asyncio.sleep(0.01)
+    try:
+        # Only wait for a max of 2 seconds, then start with whoever has joined
+        # by then. This is just to catch the edge case that someone might
+        # disconnect at the exact moment the game starts.
+        async with asyncio.timeout(2):
+            while True:
+                if (await redis_client.pubsub_numsub(channel))[0][1] >= subs:
+                    return
+                await asyncio.sleep(0.01)
+    except TimeoutError:
+        pass
 
 async def receive_start_game(websocket: WebSocket, game_id: str, game_data: dict) -> int:
     """
