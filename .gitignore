@@ -33,9 +33,5 @@ model/trainingdata
 *.pt
 *.onnx
 *.bin
-<<<<<<< HEAD
 *.exe
 *.log
-=======
-*.log
->>>>>>> main
