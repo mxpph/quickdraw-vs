@@ -50,40 +50,41 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
   const predDebounce = 400;
 
   const modelCategories = [
-    'airplane',
-    'angel',
-    'ant',
-    'anvil',
-    'apple',
-    'banana',
-    'basketball',
-    'broom',
-    'camera',
-    'dog',
-    'dresser',
-    'hammer',
-    'hat',
-    'hexagon',
-    'paper clip',
-    'pencil'
+    "airplane",
+    "angel",
+    "ant",
+    "anvil",
+    "apple",
+    "banana",
+    "basketball",
+    "broom",
+    "camera",
+    "dog",
+    "dresser",
+    "hammer",
+    "hat",
+    "hexagon",
+    "paper clip",
+    "pencil",
   ];
 
 
   useEffect(() => {
-    var evalTimer : NodeJS.Timeout
+    
     (async () => {
       try {
         session.current = await InferenceSession.create("CNN_cat16_v6-0_large_gputrain.onnx");
-        evalTimer = setInterval(handleEvaluate,predDebounce);
-        console.log("evaltimer!",evalTimer)
       } catch (error) {
         // TODO: Handle this error properly
         console.error("Failed to load model", error);
       }
     })();
 
+    // const evalTimer = setInterval(() => { console.log("debug"); handleEvaluate()},predDebounce);
+    // console.log("evaltimer!",evalTimer);
+    
     return () => {
-      clearInterval(evalTimer)
+      // clearInterval(evalTimer)
       session.current?.release();
     };
   }, []);
@@ -237,10 +238,8 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
       return;
     }
     try {
-      const flattenedInput = input.flat(3);
-      const tensor = new Tensor("float32", new Float32Array(flattenedInput), [1, 1, 28, 28]);
-
-      // const tensor = new Tensor("float32", new Float32Array(input), [1, 784]);
+      // const flattenedInput = input.flat(3);
+      const tensor = new Tensor("float32", new Float32Array(input), [1, 1, 28, 28]);
 
       const inputMap = { input: tensor };
 
@@ -248,7 +247,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
       const output = outputMap["output"].data as Float32Array;
 
-      // console.log(output);
+
       return output;
     } catch (error) {
       console.error("Error running ONNX model:", error);
@@ -279,26 +278,47 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     return svgContent;
   };
 
+  let lastDrawn= Date.now()
+  useEffect(() => { // evaluate on lines changed
+    if (lines.length > 0) {
+      let curDrawn = Date.now()
+      if (curDrawn - lastDrawn < predDebounce) {
+        handleEvaluate();
+      } else {
+        let curLines = lines
+        setTimeout(() => {
+          if (lines === curLines) { // if lines have changed, then the drawing will get evaluated anyway
+            handleEvaluate();
+          }
+        },predDebounce - (curDrawn - lastDrawn))
+      }
+    }
+  }, [lines]);
+
   const handleEvaluate = () => {
     const normalizedStrokes = normalizeStrokes(lines);
     const rasterArray = rasterizeStrokes(normalizedStrokes);
 
+
     ONNX(rasterArray).then((res) => {
-      // console.log(res);
       res = res as Float32Array;
       let i = argMax(res);
-      setPrediction(modelCategories[i]);
       let prob = softmax(res)[i];
       let probPercent = Math.floor(prob * 1000) / 10;
+      
+      setPrediction(modelCategories[i]);
+
       setConfidence(probPercent);
+
+
       if (probPercent > 70) {
+  
         dataPass(prediction);
       } 
     });
   };
 
-  useEffect(() => {
-    // effect to check if clearCanvas is true
+  useEffect(() => { // effect to check if clearCanvas is true
     if (clearCanvas) {
       setLines([]);
       onParentClearCanvas(); // call the callback function to reset the state in parent component

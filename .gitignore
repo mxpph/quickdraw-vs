@@ -34,3 +34,4 @@ model/trainingdata
 *.onnx
 *.bin
 *.exe
+*.log
