@@ -230,7 +230,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await wait_pubsub_subscribe(f"game:{game_id}:channel", subs)
                 await send_next_round(game_id, 0)
             await asyncio.gather(
-                websocket_loop(websocket, game_id, player_id, game_data, player_data),
+                websocket_loop(websocket, game_id, game_data, player_data),
                 pubsub_loop(websocket, pubsub),
             )
 
