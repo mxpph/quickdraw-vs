@@ -2,12 +2,9 @@ import React, {
   useRef,
   useState,
   useEffect,
-  useImperativeHandle,
-  forwardRef,
 } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import { InferenceSession, Tensor } from "onnxruntime-web";
-import { clear } from "console";
 import { clearInterval } from "timers";
 
 interface AnimateProps {
@@ -68,9 +65,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     "pencil",
   ];
 
-
   useEffect(() => {
-    
     (async () => {
       try {
         session.current = await InferenceSession.create("CNN_cat16_v6-0_large_gputrain.onnx");
@@ -82,7 +77,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
     // const evalTimer = setInterval(() => { console.log("debug"); handleEvaluate()},predDebounce);
     // console.log("evaltimer!",evalTimer);
-    
+
     return () => {
       // clearInterval(evalTimer)
       session.current?.release();
@@ -208,15 +203,13 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     //     )
     //   )
     // );
-    
+
     // for (let y = 0; y < side; y++) {
     //   for (let x = 0; x < side; x++) {
     //     const i = (y * side + x) * 4;
     //     rasterImage[0][0][y][x] = imageData.data[i] / 255; // Normalize to 0-1
     //   }
     // }
-
-    
 
     return rasterImage;
   };
@@ -299,22 +292,16 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     const normalizedStrokes = normalizeStrokes(lines);
     const rasterArray = rasterizeStrokes(normalizedStrokes);
 
-
     ONNX(rasterArray).then((res) => {
       res = res as Float32Array;
       let i = argMax(res);
       let prob = softmax(res)[i];
       let probPercent = Math.floor(prob * 1000) / 10;
-      
       setPrediction(modelCategories[i]);
-
       setConfidence(probPercent);
-
-
-      if (probPercent > 70) {
-  
+      if (probPercent > 80) {
         dataPass(prediction);
-      } 
+      }
     });
   };
 
@@ -335,10 +322,10 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
         <div className="grid place-items-center">
           {prediction && (
             <AnimateText on={prediction}>
-              I guess... {confidence > 70 ? prediction : "not sure"}!
+              I guess... {confidence > 80 ? prediction : "not sure"}!
             </AnimateText>
           )}
-          {/* confidence > 70 ? (
+          {/* confidence > 80 ? (
             <p className="text-lg font-medium text-green-400">
               Confidence (dev): {confidence + "%"}
             </p>
