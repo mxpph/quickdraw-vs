@@ -5,7 +5,8 @@ import React, {
 } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import { InferenceSession, Tensor } from "onnxruntime-web";
-import { clearInterval } from "timers";
+// import { clearInterval } from "timers";
+import debounce from "lodash.debounce";
 
 interface AnimateProps {
   children: React.ReactNode;
@@ -271,24 +272,20 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     return svgContent;
   };
 
-  let lastDrawn= Date.now()
   useEffect(() => { // evaluate on lines changed
     if (lines.length > 0) {
-      let curDrawn = Date.now()
-      if (curDrawn - lastDrawn < predDebounce) {
-        handleEvaluate();
-      } else {
-        let curLines = lines
-        setTimeout(() => {
-          if (lines === curLines) { // if lines have changed, then the drawing will get evaluated anyway
-            handleEvaluate();
-          }
-        },predDebounce - (curDrawn - lastDrawn))
-      }
+      const debounceEval = debounce(handleEvaluate,predDebounce)
+      debounceEval()
+
+      return () => {
+        debounceEval.cancel(); // cleanup on unmount
+      };
+
     }
   }, [lines]);
 
   const handleEvaluate = () => {
+    console.log("ah")
     const normalizedStrokes = normalizeStrokes(lines);
     const rasterArray = rasterizeStrokes(normalizedStrokes);
 
