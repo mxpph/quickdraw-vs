@@ -44,6 +44,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
   const [confidence, setConfidence] = useState(0);
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
+  const [shouldReEval,setShouldReEval] = useState(false);
 
   const predDebounce = 400;
 
@@ -272,14 +273,29 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     return svgContent;
   };
 
+  const evalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => { // evaluate on lines changed
     if (lines.length > 0) {
-      const debounceEval = debounce(handleEvaluate,predDebounce)
-      debounceEval()
+
+      if (lines.length > 0) {
+        if (evalTimeoutRef.current) {
+          clearTimeout(evalTimeoutRef.current);
+        }
+        evalTimeoutRef.current = setTimeout(handleEvaluate, predDebounce);
+      }
 
       return () => {
-        debounceEval.cancel(); // cleanup on unmount
+        if (evalTimeoutRef.current) {
+          clearTimeout(evalTimeoutRef.current);
+        }
       };
+      // const debounceEval = debounce(handleEvaluate,predDebounce)
+      // debounceEval()
+
+      // return () => {
+      //   debounceEval.cancel(); // cleanup on unmount
+      // };
 
     }
   }, [lines]);
