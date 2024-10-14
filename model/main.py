@@ -38,6 +38,10 @@ from ctypes.macholib import dyld
 
 import cairocffi as cairo
 
+# Reduce mem usage on remote training runs
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+torch.cuda.empty_cache()
+
 def unpack_drawing(file_handle):
     key_id, = unpack('Q', file_handle.read(8))
     country_code, = unpack('2s', file_handle.read(2))
@@ -333,7 +337,7 @@ def view_images_grid(X, y):
 
 view_images_grid(X,y)
 
-print(torch.cuda.is_available()) 
+print(torch.cuda.is_available())
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -406,7 +410,7 @@ def train_model(model, X_train, y_train, epochs=10, learning_rate=0.01):
 
 def train_cnn(model, X_train, y_train, X_val, y_val, epochs=10, learning_rate=0.001):
     model = model.to(device)
-    X_train = X_train.reshape(-1, 1, 28, 28)  
+    X_train = X_train.reshape(-1, 1, 28, 28)
     X_train, y_train = torch.from_numpy(X_train).float().to(device), torch.from_numpy(y_train).long().to(device)
     X_val = X_val.reshape(-1, 1, 28, 28)
     X_val, y_val = torch.from_numpy(X_val).float().to(device), torch.from_numpy(y_val).long().to(device)
@@ -503,7 +507,7 @@ def get_pred_cnn(model, raster):
 
     predicted_label = predicted.item()
     return labels[predicted_label]
-    
+
 
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -523,7 +527,7 @@ model = SimpleCNN(num_classes=len(labels)) # 16 cats
 # train_model(model, X_train, y_train, epochs=200, learning_rate=0.025)
 train_cnn(model, X_train, y_train, X_val, y_val, epochs=100, learning_rate=0.001)
 
-# use sample input instead of 'torch.tensor(X_train[0], dtype=torch.float).unsqueeze(0)' to keep device consistent 
+# use sample input instead of 'torch.tensor(X_train[0], dtype=torch.float).unsqueeze(0)' to keep device consistent
 # sampleinput = torch.randn(1, input_size, dtype=torch.float).to(device)
 sampleinput = torch.randn(1, 1, 28, 28).to(device)
 
