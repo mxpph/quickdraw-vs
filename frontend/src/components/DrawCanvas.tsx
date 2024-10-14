@@ -48,29 +48,12 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
   const predDebounce = 400;
 
-  const modelCategories = [
-    "airplane",
-    "angel",
-    "ant",
-    "anvil",
-    "apple",
-    "banana",
-    "basketball",
-    "broom",
-    "camera",
-    "dog",
-    "dresser",
-    "hammer",
-    "hat",
-    "hexagon",
-    "paper clip",
-    "pencil",
-  ];
+  const modelCategories = ['The%20Eiffel%20Tower.bin', 'airplane.bin', 'alarm%20clock.bin', 'anvil.bin', 'apple.bin', 'axe.bin', 'banana.bin', 'bed.bin', 'bee.bin', 'birthday%20cake.bin', 'book.bin', 'brain.bin', 'broom.bin', 'bucket.bin', 'calculator.bin', 'camera.bin', 'carrot.bin', 'car.bin', 'clock.bin', 'chair.bin', 'cookie.bin', 'diamond.bin', 'donut.bin', 'door.bin', 'elephant.bin', 'eye.bin', 'fish.bin', 'giraffe.bin', 'hammer.bin', 'hat.bin', 'key.bin', 'knife.bin', 'leaf.bin', 'map.bin', 'microphone.bin', 'mug.bin', 'mushroom.bin', 'nose.bin', 'palm%20tree.bin', 'pants.bin', 'paper%20clip.bin', 'peanut.bin', 'pillow.bin', 'rabbit.bin', 'river.bin']
 
   useEffect(() => {
     (async () => {
       try {
-        session.current = await InferenceSession.create("CNN_cat16_v6-0_large_gputrain.onnx");
+        session.current = await InferenceSession.create("CNN_cat45_v6-1_large_gputrain.onnx");
       } catch (error) {
         // TODO: Handle this error properly
         console.error("Failed to load model", error);
