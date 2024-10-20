@@ -2,12 +2,11 @@ import React, {
   useRef,
   useState,
   useEffect,
-  useImperativeHandle,
-  forwardRef,
 } from "react";
 import { Stage, Layer, Line } from "react-konva";
 import { InferenceSession, Tensor } from "onnxruntime-web";
-import { clear } from "console";
+// import { clearInterval } from "timers";
+import debounce from "lodash.debounce";
 
 interface AnimateProps {
   children: React.ReactNode;
@@ -35,7 +34,6 @@ interface DrawCanvasProps {
   clearCanvas: boolean;
 }
 
-let lastDrawn = Date.now();
 const DrawCanvas: React.FC<DrawCanvasProps> = ({
   dataPass,
   onParentClearCanvas,
@@ -46,39 +44,27 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
   const [confidence, setConfidence] = useState(0);
   const isDrawing = useRef(false);
   const session = useRef<InferenceSession | null>(null);
+  const [shouldReEval,setShouldReEval] = useState(false);
 
-  const predDebounce = 750;
+  const predDebounce = 400;
 
-  const modelCategories = [
-    "apple",
-    "anvil",
-    "dresser",
-    "broom",
-    "hat",
-    "camera",
-    "dog",
-    "basketball",
-    "pencil",
-    "hammer",
-    "hexagon",
-    "banana",
-    "angel",
-    "airplane",
-    "ant",
-    "paper clip",
-  ];
+  const modelCategories = ['The%20Eiffel%20Tower.bin', 'airplane.bin', 'alarm%20clock.bin', 'anvil.bin', 'apple.bin', 'axe.bin', 'banana.bin', 'bed.bin', 'bee.bin', 'birthday%20cake.bin', 'book.bin', 'brain.bin', 'broom.bin', 'bucket.bin', 'calculator.bin', 'camera.bin', 'carrot.bin', 'car.bin', 'clock.bin', 'chair.bin', 'cookie.bin', 'diamond.bin', 'donut.bin', 'door.bin', 'elephant.bin', 'eye.bin', 'fish.bin', 'giraffe.bin', 'hammer.bin', 'hat.bin', 'key.bin', 'knife.bin', 'leaf.bin', 'map.bin', 'microphone.bin', 'mug.bin', 'mushroom.bin', 'nose.bin', 'palm%20tree.bin', 'pants.bin', 'paper%20clip.bin', 'peanut.bin', 'pillow.bin', 'rabbit.bin', 'river.bin']
 
   useEffect(() => {
     (async () => {
       try {
-        session.current = await InferenceSession.create("model3_4_large.onnx");
+        session.current = await InferenceSession.create("CNN_cat45_v6-1_large_gputrain.onnx");
       } catch (error) {
         // TODO: Handle this error properly
         console.error("Failed to load model", error);
       }
     })();
 
+    // const evalTimer = setInterval(() => { console.log("debug"); handleEvaluate()},predDebounce);
+    // console.log("evaltimer!",evalTimer);
+
     return () => {
+      // clearInterval(evalTimer)
       session.current?.release();
     };
   }, []);
@@ -97,12 +83,6 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     if (lines[lines.length - 1] !== undefined) {
       const lastLine = lines[lines.length - 1].concat([point]);
       setLines(lines.slice(0, -1).concat([lastLine]));
-    }
-
-    if (Date.now() - lastDrawn > predDebounce) {
-      // console.log("Evaluating drawing now");
-      lastDrawn = Date.now();
-      handleEvaluate();
     }
   };
 
@@ -201,6 +181,21 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
       rasterImage[i / 4] = imageData.data[i]; // Invert colors (black on white background)
     }
 
+    // const rasterImage: number[][][][] = new Array(1).fill(null).map(() =>
+    //   new Array(1).fill(null).map(() =>
+    //     new Array(side).fill(null).map(() =>
+    //       new Array(side).fill(0)
+    //     )
+    //   )
+    // );
+
+    // for (let y = 0; y < side; y++) {
+    //   for (let x = 0; x < side; x++) {
+    //     const i = (y * side + x) * 4;
+    //     rasterImage[0][0][y][x] = imageData.data[i] / 255; // Normalize to 0-1
+    //   }
+    // }
+
     return rasterImage;
   };
 
@@ -213,7 +208,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
   const argMax = (arr: Float32Array): number => arr.indexOf(Math.max(...arr));
 
-  async function ONNX(input: any) {
+  async function ONNX(input: number[]) {
     if (session.current === null) {
       console.error(
         "Attempted to run inference while InferenceSession is null"
@@ -221,7 +216,8 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
       return;
     }
     try {
-      const tensor = new Tensor("float32", new Float32Array(input), [1, 784]);
+      // const flattenedInput = input.flat(3);
+      const tensor = new Tensor("float32", new Float32Array(input), [1, 1, 28, 28]);
 
       const inputMap = { input: tensor };
 
@@ -229,7 +225,7 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
 
       const output = outputMap["output"].data as Float32Array;
 
-      // console.log(output);
+
       return output;
     } catch (error) {
       console.error("Error running ONNX model:", error);
@@ -260,26 +256,52 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
     return svgContent;
   };
 
+  const evalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => { // evaluate on lines changed
+    if (lines.length > 0) {
+
+      if (lines.length > 0) {
+        if (evalTimeoutRef.current) {
+          clearTimeout(evalTimeoutRef.current);
+        }
+        evalTimeoutRef.current = setTimeout(handleEvaluate, predDebounce);
+      }
+
+      return () => {
+        if (evalTimeoutRef.current) {
+          clearTimeout(evalTimeoutRef.current);
+        }
+      };
+      // const debounceEval = debounce(handleEvaluate,predDebounce)
+      // debounceEval()
+
+      // return () => {
+      //   debounceEval.cancel(); // cleanup on unmount
+      // };
+
+    }
+  }, [lines]);
+
   const handleEvaluate = () => {
+    console.log("ah")
     const normalizedStrokes = normalizeStrokes(lines);
     const rasterArray = rasterizeStrokes(normalizedStrokes);
 
     ONNX(rasterArray).then((res) => {
-      // console.log(res);
       res = res as Float32Array;
       let i = argMax(res);
-      setPrediction(modelCategories[i]);
       let prob = softmax(res)[i];
       let probPercent = Math.floor(prob * 1000) / 10;
+      setPrediction(modelCategories[i]);
       setConfidence(probPercent);
-      if (probPercent > 70) {
+      if (probPercent > 80) {
         dataPass(prediction);
       }
     });
   };
 
-  useEffect(() => {
-    // effect to check if clearCanvas is true
+  useEffect(() => { // effect to check if clearCanvas is true
     if (clearCanvas) {
       setLines([]);
       onParentClearCanvas(); // call the callback function to reset the state in parent component
@@ -296,10 +318,10 @@ const DrawCanvas: React.FC<DrawCanvasProps> = ({
         <div className="grid place-items-center">
           {prediction && (
             <AnimateText on={prediction}>
-              I guess... {confidence > 70 ? prediction : "not sure"}!
+              I guess... {confidence > 80 ? prediction : "not sure"}!
             </AnimateText>
           )}
-          {/* confidence > 70 ? (
+          {/* confidence > 80 ? (
             <p className="text-lg font-medium text-green-400">
               Confidence (dev): {confidence + "%"}
             </p>
